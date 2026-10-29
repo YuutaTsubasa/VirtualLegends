@@ -2,7 +2,7 @@
   // 角色一覽與養成：升級、突破。花費與上限 Server 會再檢查一次，這裡只是先算給玩家看。
   import { session, levelUp, ascend } from '../api.svelte.js';
   import { t } from '../i18n.svelte.js';
-  import { COSTUMES, SKILLS, SUIT_NAME, ROLE_NAME, unitName, characterOf, unitStats, levelCap, levelCost, ascendCost, skillText, skillCost } from '../data.js';
+  import { COSTUMES, SKILLS, ELEMENT_NAME, ROLE_NAME, unitName, characterOf, unitStats, levelCap, levelCost, ascendCost, skillText, cooldownText, passiveText } from '../data.js';
   import { portrait } from '../characters.js';
   import TopBar from './TopBar.svelte';
   import UnitCard from './UnitCard.svelte';
@@ -52,7 +52,7 @@
         {unitName(unit.id)}
       </h3>
       <p class="tags">
-        <span class="tag suit-{def.suit}">{t(SUIT_NAME[def.suit])}</span>
+        <span class="tag el-{def.element}">{t(ELEMENT_NAME[def.element])}</span>
         <span class="tag">{t(ROLE_NAME[def.role])}</span>
         <span>{t(ch.intro)}</span>
       </p>
@@ -64,14 +64,23 @@
         <div><dt>{t('攻擊')}</dt><dd>{stats.atk}</dd></div>
         <div><dt>{t('防禦')}</dt><dd>{stats.def}</dd></div>
         <div><dt>{t('速度')}</dt><dd>{stats.spd}</dd></div>
+        <div><dt>{t('暴擊')}</dt><dd>{stats.crit}%</dd></div>
+        <div><dt>{t('暴擊傷害')}</dt><dd>{stats.crit_dmg}%</dd></div>
+        <div><dt>{t('效果命中')}</dt><dd>{stats.hit}%</dd></div>
+        <div><dt>{t('效果抵抗')}</dt><dd>{stats.resist}%</dd></div>
       </dl>
       <ul class="skills">
         {#each def.skills as id, i (id)}
           {@const s = SKILLS.get(id)}
           <li>
-            <b>{[t('普攻'), t('技能'), t('大招')][i]}・{t(s.name)}</b>
-            <span>{skillCost(s)}</span>
+            <b>S{i + 1}・{t(s.name)}<small>{cooldownText(s)}</small></b>
             <span>{skillText(s)}</span>
+          </li>
+        {/each}
+        {#each def.passives ?? [] as p (p.name)}
+          <li>
+            <b>{t('被動')}・{t(p.name)}</b>
+            <span>{passiveText(p)}</span>
           </li>
         {/each}
       </ul>
@@ -148,7 +157,7 @@
   }
 
   .tag {
-    background: var(--suit, var(--felt));
+    background: var(--el, var(--felt));
     color: var(--ivory);
     padding: 0.2cqh 1cqh;
     border-radius: 0.6cqh;
@@ -193,6 +202,12 @@
     background: rgba(15, 59, 46, 0.08);
     border-radius: 0.8cqh;
     padding: 0.6cqh 1.2cqh;
+  }
+
+  .skills small {
+    margin-left: 1cqh;
+    font-weight: 400;
+    color: #6c5f45;
   }
 
   .skills span {

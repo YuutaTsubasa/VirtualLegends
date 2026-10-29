@@ -1,115 +1,110 @@
-//! 自動戰鬥：玩家按「自動」時由這裡出指令，指令一樣進紀錄、一樣由 Server 重算。
-//! 規則很單純：能放大招就放（刻子優先）、能放技能就放、不然普攻；
-//! 打敵人時先打聽牌的，再打血最少的；補血只在有人低於七成時用。
+//! 自動戰鬥：替現在輪到的我方角色選一個指令。不用亂數，同一個局面一定選一樣的。
+//!
+//! - 招式從大招往下挑：冷卻好了、而且「有用」的（純治療在沒人受傷時不用）。
+//! - 單體攻擊：有敵人在蓄力，帶暈眩或延遲的招先打它；否則打剋得到、HP 比例最低的。
+//! - 單體輔助：治療給 HP 比例最低的；其他給攻擊力最高的隊友。
+//! - 聲援滿了就接棒給大招冷卻好的隊友（攻擊力高的先）。
 
-use crate::battle::{Action, Battle, Command, Phase};
-use crate::data::{Effect, Target};
-use crate::tiles::{meld_of, Suit, Tile};
+use crate::battle::{Battle, Command, Phase};
+use crate::data::{Effect, SkillDef, StatKey, StatusKind, Target};
+use crate::state::{Side, Who};
 
-/// 手牌裡最強的一組三張（位置），沒有就 None
-pub fn best_meld(hand: &[Tile]) -> Option<[usize; 3]> {
-    let n = hand.len();
-    let mut best: Option<(i64, [usize; 3])> = None;
-    for i in 0..n {
-        for j in i + 1..n {
-            for k in j + 1..n {
-                if let Some(m) = meld_of([hand[i], hand[j], hand[k]]) {
-                    if best.is_none_or(|(p, _)| m.power() > p) {
-                        best = Some((m.power(), [i, j, k]));
-                    }
-                }
+fn heals_only(s: &SkillDef) -> bool {
+    s.effects.iter().all(|e| {
+        matches!(
+            e,
+            Effect::Heal { .. } | Effect::Shield { .. } | Effect::Cleanse { .. }
+        )
+    })
+}
+
+fn interrupts(s: &SkillDef) -> bool {
+    s.effects.iter().any(|e| {
+        matches!(
+            e,
+            Effect::Status {
+                status: StatusKind::Stun,
+                ..
             }
-        }
-    }
-    best.map(|(_, t)| t)
+        ) || matches!(e, Effect::Gauge { pct, .. } if *pct < 0)
+    })
+}
+
+fn heals(s: &SkillDef) -> bool {
+    s.effects.iter().any(|e| matches!(e, Effect::Heal { .. }))
 }
 
 pub fn choose(b: &Battle) -> Option<Command> {
     if b.phase() != Phase::Command {
         return None;
     }
-    let pending = b.pending();
-    let hand = b.hand();
-    // 大招：手上有一組就給第一個還沒動的人放
-    if let Some(tiles) = best_meld(hand) {
-        let actor = pending[0];
-        let skill = b.skill(&b.allies()[actor].skills[2]);
-        return Some(Command {
-            actor,
-            action: Action::Ultimate {
-                target: target(b, actor, skill.target),
-                tiles,
-            },
-        });
-    }
-    // 技能：誰付得起、而且用得上
-    for &actor in &pending {
-        let a = &b.allies()[actor];
-        let skill = b.skill(&a.skills[1]);
-        let heals = skill
-            .effects
-            .iter()
-            .any(|e| matches!(e, Effect::Heal { .. }));
-        if heals
-            && !b
-                .allies()
-                .iter()
-                .any(|f| f.alive() && f.hp * 10 < f.max_hp * 7)
-        {
-            continue;
-        }
-        let payable: Vec<usize> = (0..hand.len())
-            .filter(|&i| {
-                a.suit == Suit::Honor || hand[i].suit == a.suit || hand[i].suit == Suit::Honor
-            })
-            .collect();
-        // 字牌留給大招當萬用牌，先花同花色的
-        let mut tiles: Vec<usize> = payable
-            .iter()
-            .copied()
-            .filter(|&i| hand[i].suit != Suit::Honor)
-            .collect();
-        tiles.extend(
-            payable
+    let actor = b.current()?;
+    let me = &b.allies()[actor];
+    let st = &b.rules().status;
+    let allies: Vec<Who> = (0..b.allies().len())
+        .filter(|&i| b.allies()[i].alive())
+        .map(|i| (Side::Ally, i))
+        .collect();
+    let foes: Vec<usize> = (0..b.enemies().len())
+        .filter(|&i| b.enemies()[i].alive())
+        .collect();
+    let hurt = allies.iter().any(|&w| b.unit(w).hp_pct() < 70);
+
+    let slot = (0..me.skills.len())
+        .rev()
+        .find(|&s| me.can_use(s) && (!heals_only(&me.skills[s]) || hurt))
+        .unwrap_or(0);
+    let skill = &me.skills[slot];
+
+    let target = match skill.target {
+        Target::Enemy => {
+            let forced = me
+                .taunted_by()
+                .filter(|w| w.0 == Side::Enemy && b.enemies()[w.1].alive())
+                .map(|w| w.1);
+            let charging = foes
                 .iter()
                 .copied()
-                .filter(|&i| hand[i].suit == Suit::Honor),
-        );
-        if tiles.len() >= skill.cost as usize {
-            tiles.truncate(skill.cost as usize);
-            return Some(Command {
-                actor,
-                action: Action::Skill {
-                    target: target(b, actor, skill.target),
-                    tiles,
-                },
-            });
-        }
-    }
-    let actor = pending[0];
-    let skill = b.skill(&b.allies()[actor].skills[0]);
-    Some(Command {
-        actor,
-        action: Action::Basic {
-            target: target(b, actor, skill.target),
-        },
-    })
-}
-
-fn target(b: &Battle, actor: usize, t: Target) -> Option<usize> {
-    match t {
-        Target::Enemy => {
-            let e = b.enemies();
-            (0..e.len())
-                .filter(|&i| e[i].alive())
-                .min_by_key(|&i| (!e[i].ready(), e[i].hp, i))
+                .find(|&i| b.enemies()[i].charge.is_some());
+            forced
+                .or(charging.filter(|_| interrupts(skill)))
+                .or_else(|| {
+                    foes.iter().copied().min_by_key(|&i| {
+                        let e = &b.enemies()[i];
+                        (!me.element.beats(e.element), e.hp_pct(), i)
+                    })
+                })
         }
         Target::Ally => {
-            let a = b.allies();
-            (0..a.len())
-                .filter(|&i| a[i].alive())
-                .min_by_key(|&i| (a[i].hp * 1000 / a[i].max_hp, i))
+            let pick = if heals(skill) {
+                allies.iter().min_by_key(|&&w| (b.unit(w).hp_pct(), w.1))
+            } else {
+                allies
+                    .iter()
+                    .filter(|&&w| w.1 != actor || allies.len() == 1)
+                    .max_by_key(|&&w| (b.unit(w).eff(StatKey::Atk, st), std::cmp::Reverse(w.1)))
+            };
+            pick.map(|w| w.1)
         }
-        _ => Some(actor),
-    }
+        _ => None,
+    };
+
+    let relay = (b.cheer() >= b.rules().cheer_max)
+        .then(|| {
+            allies
+                .iter()
+                .filter(|&&w| {
+                    w.1 != actor && b.unit(w).can_use(2) && !b.unit(w).has(StatusKind::Stun)
+                })
+                .max_by_key(|&&w| (b.unit(w).eff(StatKey::Atk, st), std::cmp::Reverse(w.1)))
+                .map(|w| w.1)
+        })
+        .flatten();
+
+    Some(Command {
+        actor,
+        skill: slot,
+        target,
+        relay,
+    })
 }

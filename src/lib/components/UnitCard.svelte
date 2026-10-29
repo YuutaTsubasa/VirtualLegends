@@ -1,6 +1,6 @@
 <script>
   // 角色卡：半身像＋稀有度＋屬性＋名稱（招募結果、角色一覽、編隊用）
-  import { COSTUMES, SUIT_NAME, ROLE_NAME, characterOf } from '../data.js';
+  import { COSTUMES, ELEMENT_NAME, ROLE_NAME, characterOf } from '../data.js';
   import { portrait } from '../characters.js';
   import { t } from '../i18n.svelte.js';
 
@@ -11,7 +11,7 @@
 </script>
 
 <button
-  class="card rarity-{def.rarity} suit-{def.suit}"
+  class="card rarity-{def.rarity} el-{def.element}"
   class:selected
   class:dim
   type="button"
@@ -21,7 +21,7 @@
 >
   <img src={portrait(ch.id)} alt="" draggable="false" />
   <span class="stars">{'★'.repeat(def.rarity)}</span>
-  <span class="suit">{t(SUIT_NAME[def.suit])}</span>
+  <span class="el">{t(ELEMENT_NAME[def.element])}</span>
   {#if badge}<span class="badge">{badge}</span>{/if}
   <span class="name">
     <b>{t(ch.name)}</b>
@@ -78,7 +78,7 @@
     text-shadow: 0 0 0.6cqh #000, 0 0 0.3cqh #000;
   }
 
-  .suit {
+  .el {
     position: absolute;
     top: 0.5cqh;
     right: 0.6cqh;
@@ -87,7 +87,7 @@
     display: grid;
     place-items: center;
     background: var(--ivory);
-    color: var(--suit);
+    color: var(--el);
     border-radius: 0.6cqh;
     font-weight: 800;
     font-size: 0.8em;

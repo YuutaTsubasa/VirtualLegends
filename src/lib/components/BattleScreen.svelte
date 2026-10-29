@@ -1,13 +1,13 @@
 <script>
   // 戰鬥畫面：引擎（wasm）在這台裝置上跑，玩家的每個指令都記下來，打完送給 Server 重算、發獎勵。
-  // 操作：點一位還沒行動的隊友 → 選普攻／技能／大招 → 技能和大招點要花的牌 → 點目標 → 出手。
+  // 操作：輪到某位隊友時選一招（S1～S3）→ 點目標 → 出手。聲援 3 格以上可以「接棒」，指定一位隊友緊接著出手。
+  // 外觀是暫時的；bluebolt-ui 的版本另外做。
   import { onMount, onDestroy } from 'svelte';
   import { t } from '../i18n.svelte.js';
   import { session, finishBattle } from '../api.svelte.js';
   import { loadEngine, BattleSession } from '../engine.js';
-  import { COSTUMES, SKILLS, ENEMIES, SUIT_NAME, characterOf, skillText, skillCost } from '../data.js';
+  import { COSTUMES, SKILLS, ENEMIES, STAGES, ELEMENT_NAME, STATUS_NAME, isBuff, characterOf, skillAt, skillText, cooldownText } from '../data.js';
   import { portrait } from '../characters.js';
-  import Tile from './Tile.svelte';
 
   let { ticket, onexit } = $props();
 
@@ -15,22 +15,32 @@
   let view = $state(null);
   let log = $state([]);
   let pops = $state([]);
-  let banner = $state('');
+  let banner = $state(null);
   let playing = $state(false);
   let auto = $state(false);
   let fast = $state(false);
   let result = $state(null);
-  let sel = $state({ actor: null, kind: null, tiles: [], target: null });
+  let sel = $state({ skill: null, target: null, relay: null, relayMode: false });
+  let acting = $state(null);
   let destroyed = false;
 
-  const KIND_INDEX = { basic: 0, skill: 1, ultimate: 2 };
   const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+  const SHORT = {
+    atk_up: '攻↑', def_up: '防↑', spd_up: '速↑', crit_up: '暴↑', immune: '免疫', counter: '反擊',
+    atk_down: '攻↓', def_down: '防↓', spd_down: '速↓', hit_down: '命↓', burn: '灼燒', stun: '暈眩', taunt: '挑釁', silence: '封印', no_heal: '禁療',
+  };
+  const stage = STAGES.find((s) => s.id === ticket.setup.stage);
 
   onMount(async () => {
     await loadEngine();
     battle = new BattleSession(JSON.stringify(ticket.setup), ticket.seed);
-    view = JSON.parse(battle.state());
-    await play(JSON.parse(battle.events()), view);
+    const events = JSON.parse(battle.events());
+    const final = JSON.parse(battle.state());
+    view = final;
+    await play(events, final);
+    view = final;
+    suggest();
+    if (final.phase !== 'command') await finish();
   });
 
   onDestroy(() => {
@@ -48,99 +58,91 @@
     return same ? `${name} ${LETTERS[i]}` : name;
   }
   const nameOf = (side, i) => (side === 'ally' ? allyName(i) : enemyName(i));
-
-  // ---- 牌型（跟 legends-core 的 tiles::meld_of 一樣，畫面提示用） ----
-
-  function isMeld(ts) {
-    if (ts.length !== 3) return false;
-    const n = ts.filter((x) => x.suit !== 'honor').sort((a, b) => a.rank - b.rank);
-    if (n.some((x) => x.suit !== n[0].suit)) return false;
-    if (n.length <= 1) return true;
-    if (n.length === 2) return n[1].rank - n[0].rank <= 2;
-    const [a, b, c] = n.map((x) => x.rank);
-    return (a === b && b === c) || (a + 1 === b && b + 1 === c);
-  }
-  const enemyReady = (e) => e.skills.length > 1 && isMeld(e.hand);
-
-  /** 手牌裡第一組可以放大招的三張 */
-  function findMeld(hand) {
-    for (let i = 0; i < hand.length; i++)
-      for (let j = i + 1; j < hand.length; j++)
-        for (let k = j + 1; k < hand.length; k++) if (isMeld([hand[i], hand[j], hand[k]])) return [i, j, k];
-    return null;
-  }
+  const unitOf = (side, i) => (side === 'ally' ? view.allies : view.enemies)[i];
 
   // ---- 選擇指令 ----
 
-  const actor = $derived(view && sel.actor !== null ? view.allies[sel.actor] : null);
-  const skill = $derived(actor && sel.kind ? SKILLS.get(actor.skills[KIND_INDEX[sel.kind]]) : null);
-  const needTiles = $derived(sel.kind === 'skill' ? skill.cost : sel.kind === 'ultimate' ? 3 : 0);
+  const current = $derived(view?.phase === 'command' ? view.current : null);
+  const actor = $derived(current !== null && current !== undefined ? view.allies[current] : null);
+  /** 這位隊友第 i 招（套用技能等級） */
+  const skillOf = (allyIndex, i) => skillAt(SKILLS.get(view.allies[allyIndex].skill_ids[i]), ticket.setup.team[allyIndex].skills?.[i] ?? 1);
+  const skill = $derived(actor && sel.skill !== null ? skillOf(current, sel.skill) : null);
   const targetSide = $derived(skill?.target === 'enemy' ? 'enemy' : skill?.target === 'ally' ? 'ally' : null);
-  const canAct = $derived(view?.phase === 'command' && !playing && !auto);
-
-  function payable(tile) {
-    if (sel.kind === 'ultimate') return true;
-    return actor.suit === 'honor' || tile.suit === 'honor' || tile.suit === actor.suit;
-  }
+  const canAct = $derived(current !== null && current !== undefined && !playing && !auto && !result);
 
   function command() {
-    const action = { kind: sel.kind, target: sel.target };
-    if (sel.kind === 'skill') action.tiles = [...sel.tiles];
-    if (sel.kind === 'ultimate') action.tiles = [...sel.tiles];
-    return { actor: sel.actor, action };
+    const c = { actor: current, skill: sel.skill };
+    if (targetSide) c.target = sel.target;
+    if (sel.relay !== null) c.relay = sel.relay;
+    return c;
   }
 
-  const valid = $derived.by(() => {
-    if (!battle || sel.actor === null || !sel.kind || sel.tiles.length !== needTiles) return false;
+  function check(c) {
     try {
-      battle.check(JSON.stringify(command()));
-      return true;
-    } catch {
-      return false;
+      battle.check(JSON.stringify(c));
+      return '';
+    } catch (e) {
+      return String(e?.message ?? e);
     }
+  }
+
+  const problem = $derived.by(() => {
+    if (!battle || !canAct || sel.skill === null) return 'none';
+    return check(command());
   });
 
-  function defaultTarget(side) {
-    if (side === 'enemy') {
-      const ready = view.enemies.findIndex((e) => e.hp > 0 && enemyReady(e));
-      return ready >= 0 ? ready : view.enemies.findIndex((e) => e.hp > 0);
+  /** 輪到我方時，先照自動戰鬥的建議選好（不含接棒） */
+  function suggest() {
+    if (current === null || current === undefined || !battle) return;
+    const c = JSON.parse(battle.auto() ?? 'null');
+    sel = { skill: c?.skill ?? 0, target: c?.target ?? null, relay: null, relayMode: false };
+  }
+
+  function usable(i) {
+    return actor && check({ actor: current, skill: i, target: firstTarget(skillOf(current, i)) }) === '';
+  }
+
+  function firstTarget(s) {
+    if (s.target === 'enemy') {
+      const forced = actor.statuses.find((x) => x.kind === 'taunt' && x.source?.[0] === 'enemy');
+      if (forced && view.enemies[forced.source[1]].hp > 0) return forced.source[1];
+      const keep = sel.target !== null && targetSide === 'enemy' && view.enemies[sel.target]?.hp > 0;
+      return keep ? sel.target : view.enemies.findIndex((e) => e.hp > 0);
     }
-    if (side === 'ally') {
+    if (s.target === 'ally') {
       let best = -1;
       view.allies.forEach((a, i) => {
         if (a.hp > 0 && (best < 0 || a.hp / a.max_hp < view.allies[best].hp / view.allies[best].max_hp)) best = i;
       });
       return best;
     }
-    return null;
+    return undefined;
   }
 
-  function pickActor(i) {
+  function pickSkill(i) {
     if (!canAct) return;
-    if (targetSide === 'ally' && sel.actor !== null) {
-      if (view.allies[i].hp > 0) sel.target = i;
-      return;
-    }
-    if (!view.pending.includes(i)) return;
-    sel = { actor: i, kind: null, tiles: [], target: null };
-  }
-
-  function pickKind(kind) {
-    const s = SKILLS.get(actor.skills[KIND_INDEX[kind]]);
-    const side = s.target === 'enemy' ? 'enemy' : s.target === 'ally' ? 'ally' : null;
-    let tiles = [];
-    if (kind === 'ultimate') tiles = findMeld(view.hand) ?? [];
-    sel = { ...sel, kind, tiles, target: side ? defaultTarget(side) : null };
-  }
-
-  function pickTile(i) {
-    if (!canAct || !needTiles) return;
-    if (sel.tiles.includes(i)) sel.tiles = sel.tiles.filter((x) => x !== i);
-    else if (sel.tiles.length < needTiles && payable(view.hand[i])) sel.tiles = [...sel.tiles, i];
+    const s = skillOf(current, i);
+    sel = { ...sel, skill: i, target: firstTarget(s) ?? null, relayMode: false };
   }
 
   function pickEnemy(i) {
-    if (canAct && targetSide === 'enemy' && view.enemies[i].hp > 0) sel.target = i;
+    if (!canAct || view.enemies[i].hp <= 0) return;
+    if (targetSide !== 'enemy') pickSkill(0);
+    sel.target = i;
+  }
+
+  function pickAlly(i) {
+    if (!canAct || view.allies[i].hp <= 0) return;
+    if (sel.relayMode) {
+      sel = { ...sel, relay: i === current || sel.relay === i ? null : i, relayMode: false };
+    } else if (targetSide === 'ally') {
+      sel.target = i;
+    }
+  }
+
+  function toggleRelay() {
+    if (sel.relay !== null) sel = { ...sel, relay: null, relayMode: false };
+    else sel = { ...sel, relayMode: !sel.relayMode };
   }
 
   // ---- 執行與演出 ----
@@ -153,11 +155,12 @@
       session.error = t('不能這樣出手（{why}）', { why: String(e?.message ?? e) });
       return;
     }
-    sel = { actor: null, kind: null, tiles: [], target: null };
+    sel = { skill: null, target: null, relay: null, relayMode: false };
     const final = JSON.parse(battle.state());
     await play(events, final);
     view = final;
     if (final.phase !== 'command') await finish();
+    else if (!auto) suggest();
   }
 
   const wait = (ms) => new Promise((r) => setTimeout(r, fast ? ms / 2.5 : ms));
@@ -165,88 +168,130 @@
   function pop(side, slot, text, kind) {
     const key = ++popKey;
     pops = [...pops, { key, side, slot, text, kind }];
-    setTimeout(() => (pops = pops.filter((p) => p.key !== key)), 1000);
+    setTimeout(() => (pops = pops.filter((p) => p.key !== key)), 1100);
   }
-  const say = (text) => (log = [...log.slice(-7), text]);
-  const tileText = (ts) => ts.map((x) => (x.suit === 'honor' ? '東南西北中發白'[x.rank - 1] : `${'一二三四五六七八九'[x.rank - 1]}${SUIT_NAME[x.suit]}`)).join(' ');
+  const say = (text) => (log = [...log.slice(-5), text]);
 
-  /** 一個一個播事件，邊播邊更新血條；final 是播完後的狀態（換波次時拿新敵人） */
+  /** 一個一個播事件，邊播邊更新畫面；final 是播完後的狀態（換波次時拿新敵人） */
   async function play(events, final) {
     playing = true;
     for (const e of events) {
       if (destroyed) return;
+      const u = e.side ? unitOf(e.side, e.unit) : null;
       switch (e.type) {
-        case 'round':
-          say(t('── 第 {n} 回合 ──', { n: e.n }));
-          if (view) view.round = e.n;
-          break;
         case 'wave':
-          if (e.index > 0) {
-            view.enemies = final.enemies.map((x) => ({ ...x, hp: x.max_hp, shield: 0 }));
-            view.wave = e.index;
-            banner = t('第 {n} 波', { n: e.index + 1 });
+          if (e.wave > 0) {
+            view.enemies = final.enemies.map((x) => ({ ...x, hp: x.max_hp, shield: 0, statuses: [] }));
+            view.wave = e.wave;
+            banner = { text: t('第 {n} 波', { n: e.wave + 1 }) };
             await wait(700);
-            banner = '';
+            banner = null;
           }
           break;
-        case 'draw':
-          if (e.tiles.length) say(t('摸牌：{tiles}', { tiles: tileText(e.tiles) }));
+        case 'turn':
+          acting = { side: e.side, unit: e.unit };
           break;
-        case 'ready':
-          say(t('{name} 聽牌了！', { name: enemyName(e.slot) }));
-          break;
-        case 'act': {
+        case 'skill': {
           const s = SKILLS.get(e.skill);
-          say(t('{name}：{skill}', { name: nameOf(e.side, e.slot), skill: t(s.name) }));
-          if (s.kind === 'ultimate') {
-            banner = t(s.name);
+          const via = { counter: t('反擊'), link: t('連攜'), pursuit: t('追擊') }[e.via] ?? '';
+          say(`${nameOf(e.side, e.unit)}：${t(s.name)}${via ? `（${via}）` : ''}`);
+          if (e.slot === 2 && !e.via && e.side === 'ally') {
+            banner = { text: t(s.name), portrait: COSTUMES.get(u.id).character };
+            await wait(650);
+            banner = null;
+          } else if (e.slot === 2 && !e.via) {
+            banner = { text: t(s.name), enemy: true };
             await wait(500);
-            banner = '';
+            banner = null;
           }
-          await wait(260);
+          await wait(220);
           break;
         }
+        case 'trigger':
+          if (e.via === 'pursuit' || e.via === 'passive') pop(e.side, e.unit, e.name ? t(e.name) : t('追擊'), 'buff');
+          else pop(e.side, e.unit, e.via === 'counter' ? t('反擊！') : t('連攜！'), 'buff');
+          await wait(180);
+          break;
         case 'damage':
-          (e.side === 'ally' ? view.allies : view.enemies)[e.slot].hp = e.hp;
-          pop(e.side, e.slot, `-${e.amount}`, 'dmg');
-          await wait(120);
+          u.hp = e.hp;
+          u.shield = e.shield;
+          pop(e.side, e.unit, `${e.crit ? t('暴擊 ') : ''}-${e.amount}`, e.crit ? 'crit' : e.graze ? 'graze' : 'dmg');
+          await wait(110);
           break;
         case 'heal':
-          (e.side === 'ally' ? view.allies : view.enemies)[e.slot].hp = e.hp;
-          pop(e.side, e.slot, `+${e.amount}`, 'heal');
-          await wait(80);
+          u.hp = e.hp;
+          if (e.amount) pop(e.side, e.unit, `+${e.amount}`, 'heal');
+          await wait(70);
           break;
         case 'shield':
-          (e.side === 'ally' ? view.allies : view.enemies)[e.slot].shield += e.amount;
-          pop(e.side, e.slot, t('護盾'), 'buff');
+          u.shield = Math.max(u.shield, e.amount);
+          pop(e.side, e.unit, t('護盾'), 'buff');
           break;
-        case 'buff':
-          pop(e.side, e.slot, `${t({ atk: '攻擊', def: '防禦', spd: '速度' }[e.stat])}${e.pct > 0 ? '↑' : '↓'}`, e.pct > 0 ? 'buff' : 'debuff');
+        case 'status': {
+          const found = u.statuses.find((s) => s.kind === e.status);
+          if (found) found.turns = Math.max(found.turns, e.turns);
+          else u.statuses = [...u.statuses, { kind: e.status, turns: e.turns }];
+          pop(e.side, e.unit, t(STATUS_NAME[e.status]), isBuff(e.status) ? 'buff' : 'debuff');
+          await wait(60);
           break;
-        case 'steal':
-          if (e.tiles.length) say(t('{tiles} 被拿掉了', { tiles: tileText(e.tiles) }));
-          if (e.side === 'enemy') view.enemies[e.slot].hand = view.enemies[e.slot].hand.slice(0, -e.tiles.length);
+        }
+        case 'resisted':
+          pop(e.side, e.unit, t('抵抗'), 'graze');
           break;
-        case 'fizzle':
-          say(t('{name} 要用的牌被拿走了，改成普攻', { name: allyName(e.slot) }));
+        case 'expired':
+        case 'removed':
+          u.statuses = u.statuses.filter((s) => s.kind !== e.status);
+          break;
+        case 'gauge':
+          u.gauge = e.gauge;
+          pop(e.side, e.unit, e.pct > 0 ? t('加速') : t('延遲'), e.pct > 0 ? 'buff' : 'debuff');
+          break;
+        case 'charge':
+          view.enemies[e.unit].charge = { turns: e.turns - 1 };
+          say(t('{name} 開始蓄力「{skill}」！', { name: enemyName(e.unit), skill: t(SKILLS.get(e.skill).name) }));
+          break;
+        case 'charging':
+          view.enemies[e.unit].charge = { turns: e.turns };
+          break;
+        case 'interrupted':
+          view.enemies[e.unit].charge = null;
+          pop('enemy', e.unit, t('打斷！'), 'buff');
+          say(t('{name} 的蓄力被打斷了', { name: enemyName(e.unit) }));
+          break;
+        case 'break':
+          view.enemies[e.unit].toughness = 0;
+          pop('enemy', e.unit, t('破盾！'), 'crit');
+          await wait(200);
+          break;
+        case 'phase':
+          banner = { text: t('{name}：{phase}', { name: enemyName(e.unit), phase: t(e.name) }), enemy: true };
+          await wait(800);
+          banner = null;
+          break;
+        case 'stunned':
+          pop(e.side, e.unit, t('暈眩中'), 'graze');
+          await wait(200);
           break;
         case 'down':
-          say(t('{name} 倒下了', { name: nameOf(e.side, e.slot) }));
+          u.hp = 0;
+          u.statuses = [];
+          say(t('{name} 倒下了', { name: nameOf(e.side, e.unit) }));
           break;
-        case 'combo':
-          banner = t('合技！');
-          say(t('這回合打出一順一刻：全隊合技！'));
-          await wait(700);
-          banner = '';
+        case 'cheer':
+          view.cheer = e.value;
+          break;
+        case 'relay':
+          say(t('{a} 接棒給 {b}！', { a: allyName(e.from), b: allyName(e.to) }));
           break;
         case 'won':
-          banner = t('勝利');
+          banner = { text: t('勝利') };
           break;
         case 'lost':
-          banner = t('敗北');
+          banner = { text: t('敗北') };
           break;
       }
     }
+    acting = null;
     playing = false;
   }
 
@@ -261,16 +306,18 @@
 
   function toggleAuto() {
     auto = !auto;
-    sel = { actor: null, kind: null, tiles: [], target: null };
     if (auto) runAuto();
+    else suggest();
   }
 
   async function finish() {
     auto = false;
+    await wait(600);
+    banner = null;
     result = { won: view.phase === 'won', pending: true };
     try {
       const r = await finishBattle(ticket.ticket, JSON.parse(battle.log()), battle.digest());
-      result = { won: r.outcome.won, rewards: r.rewards, rounds: r.outcome.rounds, desync: r.desync };
+      result = { won: r.outcome.won, rewards: r.rewards, outcome: r.outcome, desync: r.desync };
     } catch {
       result = { won: view.phase === 'won', failed: true };
     }
@@ -280,14 +327,22 @@
     if (confirm(t('撤退的話這場不會有獎勵，確定嗎？'))) onexit();
   }
 
-  const hpPct = (f) => `${Math.max(0, (f.hp / f.max_hp) * 100)}%`;
-  const shieldPct = (f) => `${Math.min(100, (f.shield / f.max_hp) * 100)}%`;
+  const pct = (a, b) => `${Math.max(0, Math.min(100, (a / b) * 100))}%`;
+  const isActing = (side, i) => (acting ? acting.side === side && acting.unit === i : side === 'ally' && current === i);
+  const stars = $derived(
+    result?.outcome
+      ? [result.outcome.won, result.outcome.won && result.outcome.rounds <= stage.star_turns, result.outcome.won && result.outcome.survivors === view.allies.length]
+      : [],
+  );
 </script>
 
 {#if view}
   <div class="battle">
     <header>
-      <span class="round">{t('第 {r} 回合', { r: view.round })}・{t('第 {w}／{n} 波', { w: view.wave + 1, n: view.waves })}</span>
+      <span class="info">
+        {t('第 {w}／{n} 波', { w: view.wave + 1, n: view.waves })}・{t('我方 {n} 回合', { n: view.turns })}
+        {#if view.env}<span class="env" title={t(view.env.text)}>{t(view.env.name)}：{t(view.env.text)}</span>{/if}
+      </span>
       <div class="tools">
         <button type="button" class:on={auto} onclick={toggleAuto} disabled={view.phase !== 'command'}>{t('自動')}</button>
         <button type="button" class:on={fast} onclick={() => (fast = !fast)}>{t('2 倍速')}</button>
@@ -295,92 +350,113 @@
       </div>
     </header>
 
-    <section class="enemies">
-      {#each view.enemies as e, i (i + '-' + view.wave)}
-        <button
-          type="button"
-          class="enemy suit-{e.suit}"
-          class:down={e.hp <= 0}
-          class:target={targetSide === 'enemy' && sel.target === i}
-          class:pickable={canAct && targetSide === 'enemy' && e.hp > 0}
-          onclick={() => pickEnemy(i)}
-        >
-          {#if enemyReady(e) && e.hp > 0}<span class="ready">{t('聽牌')}</span>{/if}
-          <span class="ename">{enemyName(i)}</span>
-          <span class="token">{t(SUIT_NAME[e.suit])}</span>
-          <span class="bar"><i style:width={hpPct(e)}></i><s style:width={shieldPct(e)}></s></span>
-          <span class="hpnum">{e.hp}／{e.max_hp}</span>
-          <span class="ehand">
-            {#each e.hand as tile, k (k)}<Tile {tile} size="sm" disabled />{/each}
-          </span>
-          {#each pops.filter((p) => p.side === 'enemy' && p.slot === i) as p (p.key)}<b class="pop {p.kind}">{p.text}</b>{/each}
-        </button>
+    <ol class="timeline" aria-label={t('出手順序')}>
+      {#each view.timeline as w, k (k + w.side + w.unit)}
+        {@const u = unitOf(w.side, w.unit)}
+        <li class="tl tl-{w.side} el-{u.element}" class:now={k === 0}>
+          {#if w.side === 'ally'}
+            <img src={portrait(COSTUMES.get(u.id).character)} alt={allyName(w.unit)} draggable="false" />
+          {:else}
+            <span class="tok">{t(ENEMIES.get(u.id).name).slice(0, 1)}</span>
+            {#if u.charge}<b class="ch">⚡</b>{/if}
+          {/if}
+        </li>
       {/each}
-    </section>
-
-    <ol class="log" aria-live="polite">
-      {#each log as line, i (i + line)}<li>{line}</li>{/each}
     </ol>
 
-    <section class="allies">
-      {#each view.allies as a, i (i)}
-        {@const def = COSTUMES.get(a.id)}
-        <button
-          type="button"
-          class="ally rarity-{def.rarity} suit-{a.suit}"
-          class:down={a.hp <= 0}
-          class:acted={a.acted && a.hp > 0}
-          class:active={sel.actor === i}
-          class:target={targetSide === 'ally' && sel.target === i}
-          onclick={() => pickActor(i)}
-        >
-          <img src={portrait(def.character, a.hp <= 0 ? 'sad' : view.phase === 'won' ? 'win' : 'normal')} alt="" draggable="false" />
-          <span class="token">{t(SUIT_NAME[a.suit])}</span>
-          <span class="aname">{allyName(i)}<small>{t(def.name)}</small></span>
-          <span class="bar"><i style:width={hpPct(a)}></i><s style:width={shieldPct(a)}></s></span>
-          <span class="hpnum">{a.hp}</span>
-          {#if a.acted && a.hp > 0}<span class="done">{t('已行動')}</span>{/if}
-          {#each pops.filter((p) => p.side === 'ally' && p.slot === i) as p (p.key)}<b class="pop {p.kind}">{p.text}</b>{/each}
-        </button>
-      {/each}
-    </section>
+    <section class="field">
+      <div class="allies">
+        {#each view.allies as a, i (i)}
+          {@const def = COSTUMES.get(a.id)}
+          <button
+            type="button"
+            class="ally rarity-{def.rarity} el-{a.element} pos-{i}"
+            class:down={a.hp <= 0}
+            class:acting={isActing('ally', i)}
+            class:target={targetSide === 'ally' && sel.target === i}
+            class:relay={sel.relay === i}
+            class:pickable={canAct && ((targetSide === 'ally' && a.hp > 0) || (sel.relayMode && i !== current && a.hp > 0))}
+            onclick={() => pickAlly(i)}
+          >
+            <img src={portrait(def.character, a.hp <= 0 ? 'sad' : view.phase === 'won' ? 'win' : 'normal')} alt="" draggable="false" />
+            <span class="el">{t(ELEMENT_NAME[a.element])}</span>
+            <span class="nm">{allyName(i)}<small>{t(def.name)}</small></span>
+            <span class="bars">
+              <span class="bar hp"><i style:width={pct(a.hp, a.max_hp)}></i><s style:width={pct(a.shield, a.max_hp)}></s></span>
+              <span class="bar gauge"><i style:width={pct(a.gauge, 1000)}></i></span>
+            </span>
+            <span class="hpnum">{a.hp}</span>
+            <span class="sts">{#each a.statuses as s (s.kind)}<em class:bad={!isBuff(s.kind)}>{t(SHORT[s.kind])}{s.turns}</em>{/each}</span>
+            {#if sel.relay === i}<span class="tag">{t('接棒')}</span>{/if}
+            {#each pops.filter((p) => p.side === 'ally' && p.slot === i) as p (p.key)}<b class="pop {p.kind}">{p.text}</b>{/each}
+          </button>
+        {/each}
+      </div>
 
-    <section class="hand">
-      <p class="label">{t('牌氣（{n}／8）', { n: view.hand.length })}</p>
-      <div class="tiles">
-        {#each view.hand as tile, i (i + '-' + tile.suit + tile.rank)}
-          {#if canAct && needTiles}
-            <Tile {tile} selected={sel.tiles.includes(i)} disabled={!sel.tiles.includes(i) && !payable(tile)} onclick={() => pickTile(i)} />
-          {:else}
-            <Tile {tile} />
-          {/if}
+      <div class="enemies">
+        {#each view.enemies as e, i (i + '-' + view.wave)}
+          <button
+            type="button"
+            class="enemy el-{e.element} pos-{i}"
+            class:boss={e.boss}
+            class:down={e.hp <= 0}
+            class:acting={isActing('enemy', i)}
+            class:target={targetSide === 'enemy' && sel.target === i}
+            class:pickable={canAct && e.hp > 0}
+            onclick={() => pickEnemy(i)}
+          >
+            {#if e.charge && e.hp > 0}<span class="charge">{t('蓄力 {n}', { n: e.charge.turns + 1 })}</span>{/if}
+            <span class="tok">{t(ENEMIES.get(e.id).name).slice(0, 1)}</span>
+            <span class="nm">{enemyName(i)}<small>{t(ELEMENT_NAME[e.element])}</small></span>
+            {#if e.max_toughness}<span class="tough">{#each Array(e.max_toughness) as _, k (k)}<i class:on={k < e.toughness}></i>{/each}</span>{/if}
+            <span class="bar hp"><i style:width={pct(e.hp, e.max_hp)}></i><s style:width={pct(e.shield, e.max_hp)}></s></span>
+            <span class="bar gauge"><i style:width={pct(e.gauge, 1000)}></i></span>
+            <span class="sts">{#each e.statuses as s (s.kind)}<em class:bad={!isBuff(s.kind)}>{t(SHORT[s.kind])}{s.turns}</em>{/each}</span>
+            {#each pops.filter((p) => p.side === 'enemy' && p.slot === i) as p (p.key)}<b class="pop {p.kind}">{p.text}</b>{/each}
+          </button>
         {/each}
       </div>
     </section>
 
     <section class="command panel">
       {#if auto}
-        <p>{t('自動戰鬥中…')}</p>
+        <p class="hint">{t('自動戰鬥中…')}</p>
       {:else if !actor}
-        <p>{t('點一位還沒行動的隊友。敵人比他快的話，會在他之前出手。')}</p>
+        <p class="hint">{playing ? '' : t('等待中…')}</p>
       {:else}
-        <div class="kinds">
-          {#each ['basic', 'skill', 'ultimate'] as k (k)}
-            {@const s = SKILLS.get(actor.skills[KIND_INDEX[k]])}
-            <button type="button" class:on={sel.kind === k} disabled={!canAct} onclick={() => pickKind(k)}>
-              <b>{[t('普攻'), t('技能'), t('大招')][KIND_INDEX[k]]}</b>{t(s.name)}
+        <div class="who el-{actor.element}">
+          <b>{allyName(current)}</b>
+          <span class="cheer" title={t('聲援：每次我方出手 +1，花 {n} 格可以接棒', { n: view.relay_cost })}>
+            {#each Array(view.cheer_max) as _, k (k)}<i class:on={k < view.cheer}></i>{/each}
+          </span>
+          <button type="button" class="relay" class:on={sel.relayMode || sel.relay !== null} disabled={view.cheer < view.relay_cost} onclick={toggleRelay}>
+            {sel.relay !== null ? t('接棒：{name}', { name: allyName(sel.relay) }) : sel.relayMode ? t('點一位隊友') : t('接棒')}
+          </button>
+        </div>
+        <div class="skills">
+          {#each [0, 1, 2] as i (i)}
+            {@const s = skillOf(current, i)}
+            {@const cd = actor.cooldowns[i]}
+            <button type="button" class:on={sel.skill === i} disabled={!usable(i)} onclick={() => pickSkill(i)}>
+              <b>S{i + 1}・{t(s.name)}</b>
+              <small>{cd > 0 ? t('冷卻中（{n}）', { n: cd }) : cooldownText(s)}</small>
             </button>
           {/each}
         </div>
-        {#if skill}
-          <p class="desc">{skillCost(skill)}・{skillText(skill)}</p>
-          {#if needTiles}<p class="desc">{t('已選 {a}／{b} 張', { a: sel.tiles.length, b: needTiles })}</p>{/if}
-        {/if}
-        <button class="btn go" type="button" disabled={!valid || !canAct} onclick={() => send(command())}>{t('出手')}</button>
+        {#if skill}<p class="desc">{skillText(skill)}</p>{/if}
+        <button class="btn go" type="button" disabled={problem !== ''} onclick={() => send(command())}>{t('出手')}</button>
       {/if}
+      <ol class="log" aria-live="polite">
+        {#each log as line, i (i + line)}<li>{line}</li>{/each}
+      </ol>
     </section>
 
-    {#if banner}<div class="banner">{banner}</div>{/if}
+    {#if banner}
+      <div class="banner" class:foe={banner.enemy}>
+        {#if banner.portrait}<img src={portrait(banner.portrait, 'happy')} alt="" draggable="false" />{/if}
+        <span>{banner.text}</span>
+      </div>
+    {/if}
 
     {#if result}
       <div class="scrim" role="dialog" aria-modal="true">
@@ -390,12 +466,19 @@
             <p>{t('伺服器驗證中…')}</p>
           {:else if result.failed}
             <p>{session.error || t('結算失敗')}</p>
-          {:else if result.won}
-            <p>{t('{n} 回合過關', { n: result.rounds })}</p>
-            <p>{t('金幣 +{g}・練習筆記 +{n}', { g: result.rewards.gold, n: result.rewards.notes })}</p>
-            {#if result.rewards.first}<p class="first">{t('首次通關：星屑 +{s}', { s: result.rewards.stardust })}</p>{/if}
           {:else}
-            <p>{t('練等級或換隊伍再來一次吧。')}</p>
+            <ul class="stars">
+              <li class:on={stars[0]}>★ {t('通關')}</li>
+              <li class:on={stars[1]}>★ {t('{n} 回合內', { n: stage.star_turns })}</li>
+              <li class:on={stars[2]}>★ {t('沒有人倒下')}</li>
+            </ul>
+            {#if result.won}
+              <p>{t('我方 {n} 回合過關', { n: result.outcome.rounds })}</p>
+              <p>{t('金幣 +{g}・練習筆記 +{n}', { g: result.rewards.gold, n: result.rewards.notes })}</p>
+              {#if result.rewards.first}<p class="first">{t('首次通關：星屑 +{s}', { s: result.rewards.stardust })}</p>{/if}
+            {:else}
+              <p>{t('練等級、換隊伍或調整出手順序再來一次吧。')}</p>
+            {/if}
           {/if}
           {#if result.desync}<p class="warn">{t('這台裝置跟伺服器的結果不一樣，獎勵以伺服器為準。')}</p>{/if}
           <button class="btn" type="button" disabled={result.pending} onclick={onexit}>{t('返回')}</button>
@@ -424,9 +507,20 @@
     background: rgba(0, 0, 0, 0.45);
   }
 
-  .round {
+  .info {
     color: var(--gold);
     font-weight: 700;
+    display: flex;
+    gap: 2cqh;
+    align-items: center;
+  }
+
+  .env {
+    font-size: 0.75em;
+    color: var(--ivory);
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 0.6cqh;
+    padding: 0.3cqh 1.2cqh;
   }
 
   .tools {
@@ -446,94 +540,240 @@
     border-color: var(--gold);
   }
 
+  /* ---- 時間軸 ---- */
+  .timeline {
+    position: absolute;
+    top: 8.5cqh;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 1cqh;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tl {
+    position: relative;
+    width: 7cqh;
+    height: 7cqh;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 0.35cqh solid var(--el);
+    background: #111;
+    display: grid;
+    place-items: center;
+  }
+
+  .tl.now {
+    width: 9cqh;
+    height: 9cqh;
+    margin-top: -1cqh;
+    box-shadow: 0 0 1.6cqh var(--gold);
+    border-color: var(--gold);
+  }
+
+  .tl.tl-enemy {
+    border-radius: 1cqh;
+    background: color-mix(in srgb, var(--el) 50%, #111);
+  }
+
+  .tl img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 10%;
+  }
+
+  .tl .tok {
+    font-weight: 900;
+    font-size: 1.2em;
+  }
+
+  .ch {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    font-size: 0.8em;
+  }
+
+  /* ---- 場地：我方在左、敵人在右 ---- */
+  .field {
+    position: absolute;
+    top: 19cqh;
+    left: 0;
+    right: 0;
+    height: 52cqh;
+  }
+
+  .allies,
   .enemies {
     position: absolute;
-    top: 9cqh;
+    top: 0;
+    bottom: 0;
+    width: 76cqh;
+  }
+
+  .allies {
     left: 4cqh;
-    right: 46cqh;
-    height: 31cqh;
-    display: flex;
-    justify-content: center;
-    gap: 2cqh;
+  }
+
+  .enemies {
+    right: 4cqh;
+  }
+
+  .ally,
+  .enemy {
+    position: absolute;
+    width: 34cqh;
+    height: 24cqh;
+    padding: 0;
+    border-radius: 1.2cqh;
+    text-align: left;
+    transition: transform 0.15s;
+  }
+
+  /* 前後兩排錯開 */
+  .ally.pos-0 { left: 38cqh; top: 0; }
+  .ally.pos-1 { left: 38cqh; top: 27cqh; }
+  .ally.pos-2 { left: 0; top: 4cqh; }
+  .ally.pos-3 { left: 0; top: 31cqh; }
+  .enemy.pos-0 { left: 0; top: 0; }
+  .enemy.pos-1 { left: 0; top: 27cqh; }
+  .enemy.pos-2 { left: 38cqh; top: 4cqh; }
+  .enemy.pos-3 { left: 38cqh; top: 31cqh; }
+  .enemy.pos-4 { left: 19cqh; top: 14cqh; }
+  .enemy.boss { left: 14cqh; top: 4cqh; width: 46cqh; height: 44cqh; }
+
+  .ally {
+    overflow: hidden;
+    border: 0.4cqh solid var(--rarity);
+    background: radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--el) 35%, #0a2a1f) 0%, #071a13 100%);
+  }
+
+  .ally img {
+    position: absolute;
+    right: -3cqh;
+    top: -1cqh;
+    height: 30cqh;
   }
 
   .enemy {
-    position: relative;
-    width: 24cqh;
     border: var(--line) solid rgba(0, 0, 0, 0.5);
-    border-radius: 1.2cqh;
     background: linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.25));
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 1.2cqh;
+    justify-content: flex-end;
     gap: 0.6cqh;
-    cursor: default;
+    padding: 1.2cqh 1.6cqh;
   }
 
-  .enemy.pickable {
+  .enemy .tok {
+    width: 9cqh;
+    height: 9cqh;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 2em;
+    font-weight: 900;
+    background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--el) 40%, white), var(--el));
+    margin-bottom: auto;
+  }
+
+  .enemy.boss .tok {
+    width: 20cqh;
+    height: 20cqh;
+    font-size: 4em;
+  }
+
+  .pickable {
     cursor: pointer;
-    border-color: rgba(227, 181, 82, 0.5);
   }
 
-  .enemy.target {
+  .enemy.pickable:hover,
+  .ally.pickable:hover {
+    transform: translateY(-0.6cqh);
+  }
+
+  .acting {
+    box-shadow: 0 0 2.4cqh var(--gold);
+  }
+
+  .ally.acting {
     border-color: var(--gold);
-    box-shadow: 0 0 2cqh rgba(227, 181, 82, 0.7);
   }
 
-  .enemy.down,
-  .ally.down {
+  .target {
+    outline: 0.5cqh solid var(--accent);
+  }
+
+  .relay {
+    outline: 0.5cqh dashed var(--shield);
+  }
+
+  .down {
     opacity: 0.35;
     filter: grayscale(1);
   }
 
-  .ename {
-    font-weight: 700;
+  .el {
+    position: absolute;
+    top: 1cqh;
+    left: 1cqh;
+    width: 4cqh;
+    height: 4cqh;
+    border-radius: 0.6cqh;
+    display: grid;
+    place-items: center;
+    font-weight: 900;
+    background: var(--el);
+  }
+
+  .nm {
+    display: flex;
+    flex-direction: column;
+    font-weight: 800;
+    text-shadow: 0 0.3cqh 0.4cqh #000;
     font-size: 0.85em;
   }
 
-  .enemy .token {
-    width: 9cqh;
-    height: 9cqh;
-    font-size: 2em;
-    border-radius: 50%;
-  }
-
-  .token {
-    display: grid;
-    place-items: center;
-    background: var(--ivory);
-    color: var(--suit);
-    font-weight: 900;
-    border: 0.3cqh solid var(--suit);
-  }
-
-  .ready {
+  .ally .nm {
     position: absolute;
-    top: -1.4cqh;
-    right: -1cqh;
-    background: var(--accent);
-    border: 0.25cqh solid var(--gold);
-    border-radius: 0.8cqh;
-    padding: 0.2cqh 1cqh;
-    font-weight: 800;
-    font-size: 0.75em;
-    animation: blink 0.8s infinite alternate;
+    left: 1.2cqh;
+    bottom: 7cqh;
   }
 
-  @keyframes blink {
-    to {
-      filter: brightness(1.5);
-    }
+  .nm small {
+    font-size: 0.65em;
+    color: var(--gold);
+  }
+
+  .enemy .nm {
+    align-items: center;
+  }
+
+  .bars {
+    position: absolute;
+    left: 1.2cqh;
+    right: 1.2cqh;
+    bottom: 3.4cqh;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4cqh;
   }
 
   .bar {
     position: relative;
     width: 100%;
-    height: 1.4cqh;
+    height: 1.3cqh;
     background: rgba(0, 0, 0, 0.6);
     border-radius: 1cqh;
     overflow: hidden;
+  }
+
+  .bar.gauge {
+    height: 0.7cqh;
   }
 
   .bar i,
@@ -545,8 +785,12 @@
     transition: width 0.25s;
   }
 
-  .bar i {
+  .bar.hp i {
     background: var(--hp);
+  }
+
+  .bar.gauge i {
+    background: var(--gold);
   }
 
   .bar s {
@@ -555,152 +799,98 @@
   }
 
   .hpnum {
-    font-size: 0.65em;
-    font-variant-numeric: tabular-nums;
-    opacity: 0.85;
-  }
-
-  .ehand {
-    display: flex;
-    gap: 0.4cqh;
-    min-height: 5.4cqh;
-  }
-
-  .log {
-    position: absolute;
-    top: 9cqh;
-    right: 2.4cqh;
-    width: 42cqh;
-    height: 31cqh;
-    margin: 0;
-    padding: 1cqh 1.6cqh;
-    list-style: none;
-    background: rgba(0, 0, 0, 0.35);
-    border-radius: 1cqh;
-    font-size: 0.7em;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: 0.3cqh;
-  }
-
-  .allies {
-    position: absolute;
-    top: 42cqh;
-    left: 4cqh;
-    right: 4cqh;
-    height: 27cqh;
-    display: flex;
-    justify-content: center;
-    gap: 2cqh;
-  }
-
-  .ally {
-    position: relative;
-    width: 32cqh;
-    padding: 0;
-    border: 0.4cqh solid var(--rarity);
-    border-radius: 1.2cqh;
-    overflow: hidden;
-    background: radial-gradient(circle at 30% 30%, #2d6d55 0%, #0a2a1f 100%);
-    text-align: left;
-  }
-
-  .ally img {
-    position: absolute;
-    right: -2cqh;
-    top: 0;
-    height: 30cqh;
-    object-fit: cover;
-    object-position: 50% 0;
-  }
-
-  .ally.active {
-    border-color: var(--gold);
-    transform: translateY(-1.2cqh);
-    box-shadow: 0 0 2.4cqh rgba(227, 181, 82, 0.8);
-  }
-
-  .ally.target {
-    outline: 0.5cqh solid var(--hp);
-  }
-
-  .ally.acted img {
-    filter: brightness(0.55);
-  }
-
-  .ally .token {
-    position: absolute;
-    top: 1cqh;
-    left: 1cqh;
-    width: 4cqh;
-    height: 4cqh;
-    border-radius: 0.6cqh;
-  }
-
-  .aname {
     position: absolute;
     left: 1.2cqh;
-    bottom: 6cqh;
-    display: flex;
-    flex-direction: column;
-    font-weight: 800;
-    text-shadow: 0 0.3cqh 0.4cqh #000;
-  }
-
-  .aname small {
+    bottom: 0.6cqh;
     font-size: 0.6em;
-    color: var(--gold);
+    font-variant-numeric: tabular-nums;
   }
 
-  .ally .bar {
-    position: absolute;
-    left: 1.2cqh;
-    right: 1.2cqh;
-    bottom: 2.6cqh;
-    width: auto;
+  .sts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4cqh;
+    min-height: 2.4cqh;
   }
 
-  .ally .hpnum {
+  .ally .sts {
     position: absolute;
-    left: 1.2cqh;
+    right: 1cqh;
     bottom: 0.4cqh;
+    justify-content: flex-end;
   }
 
-  .done {
+  .sts em {
+    font-style: normal;
+    font-size: 0.55em;
+    background: rgba(40, 120, 220, 0.85);
+    border-radius: 0.4cqh;
+    padding: 0 0.6cqh;
+  }
+
+  .sts em.bad {
+    background: rgba(200, 60, 40, 0.9);
+  }
+
+  .tag,
+  .charge {
     position: absolute;
     top: 1cqh;
     right: 1cqh;
-    background: rgba(0, 0, 0, 0.7);
-    border-radius: 0.6cqh;
+    background: var(--accent);
+    border: 0.25cqh solid var(--gold);
+    border-radius: 0.8cqh;
     padding: 0.2cqh 1cqh;
-    font-size: 0.65em;
+    font-weight: 800;
+    font-size: 0.7em;
+  }
+
+  .charge {
+    animation: blink 0.7s infinite alternate;
+  }
+
+  @keyframes blink {
+    to {
+      filter: brightness(1.6);
+    }
+  }
+
+  .tough {
+    display: flex;
+    gap: 0.4cqh;
+  }
+
+  .tough i {
+    width: 1.6cqh;
+    height: 1.6cqh;
+    transform: rotate(45deg);
+    border: 0.2cqh solid var(--shield);
+  }
+
+  .tough i.on {
+    background: var(--shield);
   }
 
   .pop {
     position: absolute;
     left: 50%;
-    top: 30%;
+    top: 35%;
     transform: translateX(-50%);
-    font-size: 1.4em;
+    font-size: 1.3em;
     font-weight: 900;
+    white-space: nowrap;
     pointer-events: none;
     text-shadow: 0 0.3cqh 0 #000;
-    animation: rise 1s ease-out forwards;
+    animation: rise 1.1s ease-out forwards;
+    z-index: 2;
   }
 
-  .pop.dmg {
-    color: #ffd2c7;
-  }
-  .pop.heal {
-    color: var(--hp);
-  }
-  .pop.buff {
-    color: var(--shield);
-  }
-  .pop.debuff {
-    color: #ff9f6b;
-  }
+  .pop.dmg { color: #ffd2c7; }
+  .pop.crit { color: #ffcf4a; font-size: 1.6em; }
+  .pop.graze { color: #c8c8c8; }
+  .pop.heal { color: var(--hp); }
+  .pop.buff { color: var(--shield); }
+  .pop.debuff { color: #ff9f6b; }
 
   @keyframes rise {
     from {
@@ -713,48 +903,74 @@
     }
   }
 
-  .hand {
-    position: absolute;
-    left: 4cqh;
-    bottom: 3cqh;
-    width: 84cqh;
-  }
-
-  .label {
-    margin: 0 0 1cqh;
-    font-size: 0.75em;
-    color: var(--gold);
-  }
-
-  .tiles {
-    display: flex;
-    gap: 1cqh;
-    min-height: 10cqh;
-    align-items: flex-end;
-  }
-
+  /* ---- 指令 ---- */
   .command {
     position: absolute;
+    left: 3cqh;
     right: 3cqh;
-    bottom: 3cqh;
-    width: 82cqh;
+    bottom: 2.4cqh;
     height: 24cqh;
-    padding: 1.6cqh 2cqh;
+    padding: 1.4cqh 2cqh;
     font-size: 0.85em;
+    display: grid;
+    grid-template-columns: 1fr 50cqh;
+    grid-template-rows: auto auto 1fr;
+    column-gap: 2cqh;
+  }
+
+  .hint {
+    margin: 0;
+    grid-column: 1;
+  }
+
+  .who {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 1.6cqh;
   }
 
-  .command p {
-    margin: 0.4cqh 0;
+  .who b {
+    font-size: 1.2em;
+    border-left: 0.8cqh solid var(--el);
+    padding-left: 1cqh;
   }
 
-  .kinds {
+  .cheer {
+    display: flex;
+    gap: 0.6cqh;
+  }
+
+  .cheer i {
+    width: 2cqh;
+    height: 2cqh;
+    border-radius: 50%;
+    border: 0.25cqh solid var(--gold-deep);
+  }
+
+  .cheer i.on {
+    background: var(--gold);
+  }
+
+  .relay {
+    background: var(--ivory-deep);
+    border: 0.25cqh solid var(--gold-deep);
+    border-radius: 0.8cqh;
+    padding: 0.3cqh 1.4cqh;
+    color: var(--ink);
+  }
+
+  .relay.on {
+    background: var(--shield);
+  }
+
+  .skills {
     display: flex;
     gap: 1cqh;
+    margin-top: 1cqh;
+    grid-column: 1;
   }
 
-  .kinds button {
+  .skills button {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -766,44 +982,93 @@
     padding: 0.6cqh;
   }
 
-  .kinds button.on {
+  .skills button.on {
     background: var(--accent);
     color: var(--ivory);
     border-color: var(--gold);
   }
 
+  .skills button:disabled {
+    opacity: 0.45;
+  }
+
+  .skills small {
+    font-size: 0.75em;
+  }
+
   .desc {
+    grid-column: 1;
+    margin: 0.8cqh 0 0;
     font-size: 0.9em;
     color: #4a4135;
   }
 
   .go {
-    margin-top: auto;
-    align-self: flex-end;
+    position: absolute;
+    right: 54cqh;
+    bottom: 1.4cqh;
     padding: 1cqh 5cqh;
   }
 
-  .banner {
-    position: absolute;
-    top: 36cqh;
-    left: 0;
-    right: 0;
-    text-align: center;
-    font-size: 3.4em;
-    font-weight: 900;
-    letter-spacing: 0.3em;
-    color: var(--ivory);
-    -webkit-text-stroke: 0.4cqh var(--accent-deep);
-    paint-order: stroke fill;
-    text-shadow: 0 0 3cqh rgba(227, 181, 82, 0.9);
-    pointer-events: none;
-    animation: pop-in 0.25s ease-out;
-    z-index: 10;
+  .log {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    margin: 0;
+    padding: 0.8cqh 1.2cqh;
+    list-style: none;
+    background: rgba(15, 59, 46, 0.1);
+    border-radius: 0.8cqh;
+    font-size: 0.8em;
+    color: #3a3326;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 0.2cqh;
+    overflow: hidden;
   }
 
-  @keyframes pop-in {
+  /* ---- 演出 ---- */
+  .banner {
+    position: absolute;
+    top: 30cqh;
+    left: 0;
+    right: 0;
+    height: 22cqh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3cqh;
+    background: linear-gradient(90deg, transparent, rgba(210, 64, 47, 0.85) 20%, rgba(210, 64, 47, 0.85) 80%, transparent);
+    transform: skewY(-4deg);
+    pointer-events: none;
+    animation: slide 0.3s ease-out;
+    z-index: 10;
+    overflow: hidden;
+  }
+
+  .banner.foe {
+    background: linear-gradient(90deg, transparent, rgba(60, 30, 110, 0.9) 20%, rgba(60, 30, 110, 0.9) 80%, transparent);
+  }
+
+  .banner img {
+    height: 40cqh;
+    margin-top: 16cqh;
+    transform: skewY(4deg);
+  }
+
+  .banner span {
+    font-size: 3em;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    color: var(--ivory);
+    -webkit-text-stroke: 0.3cqh #000;
+    paint-order: stroke fill;
+    transform: skewY(4deg);
+  }
+
+  @keyframes slide {
     from {
-      transform: scale(1.6);
+      transform: skewY(-4deg) translateX(-30%);
       opacity: 0;
     }
   }
@@ -818,7 +1083,7 @@
   }
 
   .res {
-    width: 60cqh;
+    width: 64cqh;
     padding: 3cqh;
     text-align: center;
   }
@@ -828,8 +1093,22 @@
     font-size: 2em;
   }
 
+  .stars {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    gap: 2cqh;
+    color: #9a8f78;
+  }
+
+  .stars li.on {
+    color: #d49a00;
+    font-weight: 800;
+  }
+
   .first {
-    color: var(--pin);
+    color: var(--tide);
     font-weight: 800;
   }
 

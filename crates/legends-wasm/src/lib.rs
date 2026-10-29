@@ -2,9 +2,9 @@
 //!
 //! Client（戰鬥畫面）：
 //!   const b = new BattleSession(JSON.stringify(ticket.setup), ticket.seed);
-//!   b.apply(JSON.stringify({ actor: 0, action: { kind: 'basic', target: 0 } })); // 回傳這一步的事件（JSON 陣列）
+//!   b.apply(JSON.stringify({ actor: 0, skill: 1, target: 0, relay: 2 })); // 回傳這一步的事件（JSON 陣列）
 //!   const cmd = b.auto();      // 自動戰鬥的下一個指令（JSON），打完了是 undefined
-//!   JSON.parse(b.state());     // 手牌、雙方、回合、波次、勝負
+//!   JSON.parse(b.state());     // 雙方、輪到誰、時間軸、聲援、波次、環境、勝負
 //!   b.log();                   // 指令紀錄，打完送給 Server
 //!
 //! Server（結算）：
@@ -17,6 +17,9 @@ use legends_core::replay;
 use serde_json::json;
 use std::sync::OnceLock;
 use wasm_bindgen::prelude::*;
+
+/// 時間軸顯示幾個
+const TIMELINE: usize = 8;
 
 fn catalog() -> &'static Catalog {
     static CAT: OnceLock<Catalog> = OnceLock::new();
@@ -75,15 +78,24 @@ impl BattleSession {
 
     pub fn state(&self) -> String {
         let b = &self.battle;
+        let timeline: Vec<_> = b
+            .timeline(TIMELINE)
+            .into_iter()
+            .map(|(side, unit)| json!({ "side": side, "unit": unit }))
+            .collect();
         json!({
             "phase": b.phase(),
-            "round": b.round(),
+            "current": b.current(),
+            "turns": b.ally_turns(),
             "wave": b.wave(),
             "waves": b.wave_count(),
-            "hand": b.hand(),
+            "cheer": b.cheer(),
+            "cheer_max": b.rules().cheer_max,
+            "relay_cost": b.rules().relay_cost,
+            "env": b.env(),
             "allies": b.allies(),
             "enemies": b.enemies(),
-            "pending": b.pending(),
+            "timeline": timeline,
         })
         .to_string()
     }
@@ -120,6 +132,15 @@ pub fn check_setup(setup: &str) -> Result<(), JsError> {
     Battle::new(catalog(), &setup, 0)
         .map(|_| ())
         .map_err(|e| JsError::new(&format!("{e:?}")))
+}
+
+/// 一個隊伍成員（等級、突破、羈絆、技能等級、裝備）的能力值，給角色畫面顯示
+#[wasm_bindgen(js_name = memberStats)]
+pub fn member_stats(member: &str) -> Result<String, JsError> {
+    let m: legends_core::stats::Member = parse(member, "member")?;
+    let s = legends_core::stats::member_stats(catalog(), &m)
+        .ok_or_else(|| JsError::new("unknown costume"))?;
+    Ok(serde_json::to_string(&s).unwrap())
 }
 
 /// 等級上限（看突破），Server 的養成用同一份規則

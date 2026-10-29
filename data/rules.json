@@ -1,0 +1,37 @@
+{
+  "base": { "crit": 15, "crit_dmg": 150, "hit": 0, "resist": 0 },
+  "adv": 130,
+  "adv_hit": 15,
+  "disadv": 85,
+  "graze": 20,
+  "graze_dmg": 50,
+  "hit_floor": 15,
+  "hit_cap": 100,
+  "status": {
+    "atk_up": 30, "def_up": 40, "spd_up": 25, "crit_up": 25,
+    "atk_down": 30, "def_down": 40, "spd_down": 25, "hit_down": 40,
+    "burn": 45
+  },
+  "cheer_max": 5,
+  "relay_cost": 3,
+  "bond_link": 25,
+  "bonds": [
+    ["xiaocui", "yuehua"],
+    ["xiaocui", "xiaochun"],
+    ["aming", "cangya"],
+    ["aming", "alie"],
+    ["tangtang", "lanjie"],
+    ["lanjie", "jinye"],
+    ["leo", "yuehua"],
+    ["cangya", "alie"]
+  ],
+  "resonance": [
+    { "element": "blaze", "count": 2, "stat": "atk", "pct": 8 },
+    { "element": "tide", "count": 2, "stat": "hp", "pct": 10 },
+    { "element": "gale", "count": 2, "stat": "spd", "add": 6 },
+    { "element": "dawn", "count": 2, "stat": "resist", "add": 15 },
+    { "element": "dusk", "count": 2, "stat": "hit", "add": 15 }
+  ],
+  "guardian_aggro": 40,
+  "toughness_dmg": 60
+}

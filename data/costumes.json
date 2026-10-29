@@ -1,77 +1,17 @@
 [
-  {
-    "id": "xiaocui.uniform", "character": "xiaocui", "name": "麻將館制服", "rarity": 3, "suit": "sou", "role": "attacker",
-    "base": { "hp": 820, "atk": 108, "def": 40, "spd": 108 }, "growth": { "hp": 28, "atk": 5, "def": 2, "spd": 0 },
-    "skills": ["strike", "xiaocui.uniform.skill", "xiaocui.uniform.ult"]
-  },
-  {
-    "id": "yuehua.uniform", "character": "yuehua", "name": "麻將館制服", "rarity": 3, "suit": "pin", "role": "disruptor",
-    "base": { "hp": 860, "atk": 98, "def": 46, "spd": 112 }, "growth": { "hp": 29, "atk": 4, "def": 2, "spd": 0 },
-    "skills": ["strike", "yuehua.uniform.skill", "yuehua.uniform.ult"]
-  },
-  {
-    "id": "aming.uniform", "character": "aming", "name": "麻將館制服", "rarity": 3, "suit": "man", "role": "attacker",
-    "base": { "hp": 840, "atk": 118, "def": 38, "spd": 96 }, "growth": { "hp": 28, "atk": 6, "def": 2, "spd": 0 },
-    "skills": ["strike", "aming.uniform.skill", "aming.uniform.ult"]
-  },
-  {
-    "id": "tangtang.uniform", "character": "tangtang", "name": "麻將館制服", "rarity": 3, "suit": "sou", "role": "support",
-    "base": { "hp": 880, "atk": 86, "def": 48, "spd": 118 }, "growth": { "hp": 30, "atk": 4, "def": 2, "spd": 0 },
-    "skills": ["strike", "tangtang.uniform.skill", "tangtang.uniform.ult"]
-  },
-  {
-    "id": "xiaochun.uniform", "character": "xiaochun", "name": "麻將館制服", "rarity": 3, "suit": "sou", "role": "attacker",
-    "base": { "hp": 800, "atk": 112, "def": 38, "spd": 116 }, "growth": { "hp": 27, "atk": 5, "def": 2, "spd": 0 },
-    "skills": ["strike", "xiaochun.uniform.skill", "xiaochun.uniform.ult"]
-  },
-  {
-    "id": "lanjie.uniform", "character": "lanjie", "name": "麻將館制服", "rarity": 3, "suit": "pin", "role": "guardian",
-    "base": { "hp": 1060, "atk": 82, "def": 66, "spd": 94 }, "growth": { "hp": 36, "atk": 3, "def": 3, "spd": 0 },
-    "skills": ["strike", "lanjie.uniform.skill", "lanjie.uniform.ult"]
-  },
-  {
-    "id": "cangya.uniform", "character": "cangya", "name": "麻將館制服", "rarity": 3, "suit": "man", "role": "disruptor",
-    "base": { "hp": 840, "atk": 104, "def": 42, "spd": 114 }, "growth": { "hp": 28, "atk": 5, "def": 2, "spd": 0 },
-    "skills": ["strike", "cangya.uniform.skill", "cangya.uniform.ult"]
-  },
-  {
-    "id": "jinye.uniform", "character": "jinye", "name": "麻將館制服", "rarity": 3, "suit": "pin", "role": "attacker",
-    "base": { "hp": 900, "atk": 114, "def": 44, "spd": 88 }, "growth": { "hp": 30, "atk": 5, "def": 2, "spd": 0 },
-    "skills": ["strike", "jinye.uniform.skill", "jinye.uniform.ult"]
-  },
-  {
-    "id": "leo.uniform", "character": "leo", "name": "麻將館制服", "rarity": 3, "suit": "pin", "role": "guardian",
-    "base": { "hp": 1020, "atk": 88, "def": 62, "spd": 100 }, "growth": { "hp": 35, "atk": 4, "def": 3, "spd": 0 },
-    "skills": ["strike", "leo.uniform.skill", "leo.uniform.ult"]
-  },
-  {
-    "id": "alie.uniform", "character": "alie", "name": "麻將館制服", "rarity": 3, "suit": "man", "role": "attacker",
-    "base": { "hp": 860, "atk": 116, "def": 40, "spd": 102 }, "growth": { "hp": 29, "atk": 6, "def": 2, "spd": 0 },
-    "skills": ["strike", "alie.uniform.skill", "alie.uniform.ult"]
-  },
-  {
-    "id": "aming.rider", "character": "aming", "name": "深夜騎士", "rarity": 4, "suit": "man", "role": "attacker",
-    "base": { "hp": 900, "atk": 132, "def": 42, "spd": 110 }, "growth": { "hp": 30, "atk": 7, "def": 2, "spd": 0 },
-    "skills": ["strike", "aming.rider.skill", "aming.rider.ult"]
-  },
-  {
-    "id": "tangtang.idol", "character": "tangtang", "name": "糖霜偶像", "rarity": 4, "suit": "sou", "role": "support",
-    "base": { "hp": 960, "atk": 96, "def": 52, "spd": 124 }, "growth": { "hp": 32, "atk": 5, "def": 2, "spd": 0 },
-    "skills": ["strike", "tangtang.idol.skill", "tangtang.idol.ult"]
-  },
-  {
-    "id": "lanjie.qipao", "character": "lanjie", "name": "旗袍掌櫃", "rarity": 4, "suit": "pin", "role": "guardian",
-    "base": { "hp": 1160, "atk": 90, "def": 72, "spd": 98 }, "growth": { "hp": 39, "atk": 4, "def": 3, "spd": 0 },
-    "skills": ["strike", "lanjie.qipao.skill", "lanjie.qipao.ult"]
-  },
-  {
-    "id": "xiaocui.festival", "character": "xiaocui", "name": "夏日祭典", "rarity": 5, "suit": "sou", "role": "attacker",
-    "base": { "hp": 980, "atk": 146, "def": 46, "spd": 120 }, "growth": { "hp": 33, "atk": 8, "def": 2, "spd": 0 },
-    "skills": ["strike", "xiaocui.festival.skill", "xiaocui.festival.ult"]
-  },
-  {
-    "id": "yuehua.moonlit", "character": "yuehua", "name": "月下夜會", "rarity": 5, "suit": "honor", "role": "disruptor",
-    "base": { "hp": 1000, "atk": 134, "def": 54, "spd": 126 }, "growth": { "hp": 33, "atk": 7, "def": 3, "spd": 0 },
-    "skills": ["strike", "yuehua.moonlit.skill", "yuehua.moonlit.ult"]
-  }
+  {"id": "xiaocui.daily", "character": "xiaocui", "name": "日常", "rarity": 3, "element": "gale", "role": "attacker", "base": {"hp": 820, "atk": 108, "def": 40, "spd": 112, "crit": 5}, "growth": {"hp": 28, "atk": 5, "def": 2}, "skills": ["xiaocui.daily.s1", "xiaocui.daily.s2", "xiaocui.daily.s3"]},
+  {"id": "yuehua.daily", "character": "yuehua", "name": "日常", "rarity": 3, "element": "tide", "role": "disruptor", "base": {"hp": 860, "atk": 98, "def": 46, "spd": 118, "hit": 15}, "growth": {"hp": 29, "atk": 4, "def": 2}, "skills": ["yuehua.daily.s1", "yuehua.daily.s2", "yuehua.daily.s3"]},
+  {"id": "aming.daily", "character": "aming", "name": "日常", "rarity": 3, "element": "blaze", "role": "attacker", "base": {"hp": 840, "atk": 118, "def": 38, "spd": 98, "crit": 10}, "growth": {"hp": 28, "atk": 6, "def": 2}, "skills": ["aming.daily.s1", "aming.daily.s2", "aming.daily.s3"], "passives": [{"name": "不服輸", "on": "after_attack", "cond": {"target_hp_below": 40}, "act": {"kind": "pursuit", "power": 80}}]},
+  {"id": "tangtang.daily", "character": "tangtang", "name": "日常", "rarity": 3, "element": "gale", "role": "support", "base": {"hp": 880, "atk": 86, "def": 48, "spd": 116}, "growth": {"hp": 30, "atk": 4, "def": 2}, "skills": ["tangtang.daily.s1", "tangtang.daily.s2", "tangtang.daily.s3"]},
+  {"id": "xiaochun.daily", "character": "xiaochun", "name": "日常", "rarity": 3, "element": "blaze", "role": "attacker", "base": {"hp": 800, "atk": 112, "def": 38, "spd": 120, "crit": 5}, "growth": {"hp": 27, "atk": 5, "def": 2}, "skills": ["xiaochun.daily.s1", "xiaochun.daily.s2", "xiaochun.daily.s3"], "passives": [{"name": "默契", "on": "ally_attack", "chance": 15, "act": {"kind": "link"}}]},
+  {"id": "lanjie.daily", "character": "lanjie", "name": "日常", "rarity": 3, "element": "tide", "role": "guardian", "base": {"hp": 1080, "atk": 82, "def": 66, "spd": 96}, "growth": {"hp": 36, "atk": 3, "def": 3}, "skills": ["lanjie.daily.s1", "lanjie.daily.s2", "lanjie.daily.s3"], "passives": [{"name": "老闆娘的規矩", "on": "hit", "chance": 20, "act": {"kind": "counter"}}]},
+  {"id": "cangya.daily", "character": "cangya", "name": "日常", "rarity": 3, "element": "gale", "role": "disruptor", "base": {"hp": 840, "atk": 104, "def": 42, "spd": 114, "hit": 10}, "growth": {"hp": 28, "atk": 5, "def": 2}, "skills": ["cangya.daily.s1", "cangya.daily.s2", "cangya.daily.s3"], "passives": [{"name": "獵物到手", "on": "kill", "act": {"kind": "effects", "effects": [{"type": "gauge", "pct": 50, "to": "self"}]}}]},
+  {"id": "jinye.daily", "character": "jinye", "name": "日常", "rarity": 3, "element": "tide", "role": "attacker", "base": {"hp": 900, "atk": 114, "def": 44, "spd": 92, "crit": 15, "crit_dmg": 20}, "growth": {"hp": 30, "atk": 5, "def": 2}, "skills": ["jinye.daily.s1", "jinye.daily.s2", "jinye.daily.s3"]},
+  {"id": "leo.daily", "character": "leo", "name": "日常", "rarity": 3, "element": "tide", "role": "guardian", "base": {"hp": 1040, "atk": 88, "def": 62, "spd": 102, "resist": 15}, "growth": {"hp": 35, "atk": 4, "def": 3}, "skills": ["leo.daily.s1", "leo.daily.s2", "leo.daily.s3"]},
+  {"id": "alie.daily", "character": "alie", "name": "日常", "rarity": 3, "element": "blaze", "role": "attacker", "base": {"hp": 860, "atk": 116, "def": 40, "spd": 104, "crit": 5}, "growth": {"hp": 29, "atk": 6, "def": 2}, "skills": ["alie.daily.s1", "alie.daily.s2", "alie.daily.s3"], "passives": [{"name": "傭兵本能", "on": "hit", "chance": 25, "act": {"kind": "counter"}}]},
+  {"id": "aming.rider", "character": "aming", "name": "深夜騎士", "rarity": 4, "element": "blaze", "role": "attacker", "base": {"hp": 900, "atk": 132, "def": 42, "spd": 116, "crit": 15}, "growth": {"hp": 30, "atk": 7, "def": 2}, "skills": ["aming.rider.s1", "aming.rider.s2", "aming.rider.s3"], "passives": [{"name": "超車", "on": "after_attack", "cond": {"target_hp_below": 50}, "act": {"kind": "pursuit", "power": 100}}]},
+  {"id": "tangtang.idol", "character": "tangtang", "name": "糖霜偶像", "rarity": 4, "element": "gale", "role": "support", "base": {"hp": 960, "atk": 96, "def": 52, "spd": 128}, "growth": {"hp": 32, "atk": 5, "def": 2}, "skills": ["tangtang.idol.s1", "tangtang.idol.s2", "tangtang.idol.s3"]},
+  {"id": "lanjie.qipao", "character": "lanjie", "name": "旗袍掌櫃", "rarity": 4, "element": "tide", "role": "guardian", "base": {"hp": 1160, "atk": 90, "def": 72, "spd": 100, "resist": 20}, "growth": {"hp": 39, "atk": 4, "def": 3}, "skills": ["lanjie.qipao.s1", "lanjie.qipao.s2", "lanjie.qipao.s3"], "passives": [{"name": "掌櫃的眼神", "on": "hit", "chance": 30, "act": {"kind": "counter"}}]},
+  {"id": "xiaocui.festival", "character": "xiaocui", "name": "夏日祭典", "rarity": 5, "element": "dawn", "role": "support", "base": {"hp": 980, "atk": 128, "def": 48, "spd": 130, "crit": 10}, "growth": {"hp": 33, "atk": 7, "def": 2}, "skills": ["xiaocui.festival.s1", "xiaocui.festival.s2", "xiaocui.festival.s3"], "passives": [{"name": "開幕", "on": "battle_start", "act": {"kind": "effects", "effects": [{"type": "gauge", "pct": 15, "to": "all_allies"}]}}]},
+  {"id": "yuehua.moonlit", "character": "yuehua", "name": "月下夜會", "rarity": 5, "element": "dusk", "role": "disruptor", "base": {"hp": 1000, "atk": 134, "def": 54, "spd": 132, "hit": 25, "crit": 10}, "growth": {"hp": 33, "atk": 7, "def": 3}, "skills": ["yuehua.moonlit.s1", "yuehua.moonlit.s2", "yuehua.moonlit.s3"], "passives": [{"name": "月蝕之後", "on": "after_attack", "cond": {"target_has": "stun"}, "act": {"kind": "pursuit", "power": 70}}]}
 ]

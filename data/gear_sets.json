@@ -1,0 +1,9 @@
+[
+  { "id": "gale", "name": "疾風", "pieces": 2, "stats": [{ "stat": "spd", "pct": 10 }] },
+  { "id": "might", "name": "猛攻", "pieces": 4, "stats": [{ "stat": "atk", "pct": 30 }] },
+  { "id": "focus", "name": "專注", "pieces": 2, "stats": [{ "stat": "hit", "add": 15 }] },
+  { "id": "vital", "name": "活力", "pieces": 2, "stats": [{ "stat": "hp", "pct": 15 }] },
+  { "id": "keen", "name": "銳眼", "pieces": 2, "stats": [{ "stat": "crit", "add": 12 }] },
+  { "id": "bulwark", "name": "堅守", "pieces": 4, "passive": { "name": "堅守", "on": "hit", "chance": 25, "act": { "kind": "counter" } } },
+  { "id": "unison", "name": "連攜", "pieces": 4, "passive": { "name": "連攜", "on": "ally_attack", "chance": 20, "act": { "kind": "link" } } }
+]

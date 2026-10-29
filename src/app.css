@@ -1,4 +1,4 @@
-/* 虛擬新傳說：深夜雀館。墨綠牌桌絨布＋象牙白牌面＋金色描邊＋朱紅主行動。
+/* 虛擬新傳說：暫時的配色（墨綠＋象牙白＋金色描邊＋朱紅主行動），之後換成 bluebolt-ui。
    尺寸一律用 cqh／cqw（16:9 舞台的高／寬百分比），任何視窗大小比例都一樣。 */
 
 :root {
@@ -12,10 +12,11 @@
   --ink: #1d1a16;
   --accent: #d2402f;
   --accent-deep: #9e2a1d;
-  --man: #c7362a;
-  --pin: #2a5fb0;
-  --sou: #1f8a4c;
-  --honor: #2b2622;
+  --blaze: #e0502f;
+  --tide: #2f7fd6;
+  --gale: #2fae6a;
+  --dawn: #e8b830;
+  --dusk: #8a4fd6;
   --hp: #4ccf7a;
   --shield: #8fd3ff;
   --scrim: rgba(4, 16, 12, 0.72);
@@ -113,17 +114,20 @@ button:disabled {
   --rarity: #ffcf4a;
 }
 
-.suit-man {
-  --suit: var(--man);
+.el-blaze {
+  --el: var(--blaze);
 }
-.suit-pin {
-  --suit: var(--pin);
+.el-tide {
+  --el: var(--tide);
 }
-.suit-sou {
-  --suit: var(--sou);
+.el-gale {
+  --el: var(--gale);
 }
-.suit-honor {
-  --suit: var(--honor);
+.el-dawn {
+  --el: var(--dawn);
+}
+.el-dusk {
+  --el: var(--dusk);
 }
 
 .error-toast {

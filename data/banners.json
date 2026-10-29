@@ -8,8 +8,8 @@
     "pity": 80,
     "ten_min_rarity": 4,
     "pool": [
-      "xiaocui.uniform", "yuehua.uniform", "aming.uniform", "tangtang.uniform", "xiaochun.uniform",
-      "lanjie.uniform", "cangya.uniform", "jinye.uniform", "leo.uniform", "alie.uniform",
+      "xiaocui.daily", "yuehua.daily", "aming.daily", "tangtang.daily", "xiaochun.daily",
+      "lanjie.daily", "cangya.daily", "jinye.daily", "leo.daily", "alie.daily",
       "aming.rider", "tangtang.idol", "lanjie.qipao",
       "xiaocui.festival", "yuehua.moonlit"
     ]

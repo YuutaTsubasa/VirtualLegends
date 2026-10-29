@@ -1,6 +1,6 @@
 # 虛擬新傳說（Virtual Legends）
 
-[虛擬台麻館](https://github.com/YuutaTsubasa/TaiwanMahjong)系列（Virtual 系列）的第六款：原創的回合制轉蛋 RPG。轉蛋抽到的是系列角色的各種版本（例：小翠・夏日祭典），用以麻將牌為資源的「牌氣」戰鬥系統闖關。
+[虛擬台麻館](https://github.com/YuutaTsubasa/TaiwanMahjong)系列（Virtual 系列）的第六款：原創的回合制轉蛋 RPG。轉蛋抽到的是系列角色的各種版本（例：小翠・夏日祭典），用速度決定出手順序的「行動條」回合制戰鬥闖關（推條、接棒、反擊、連攜、追擊、五屬性相剋）。
 
 **開發中（M1）。** 企劃見 [`docs/plan.md`](docs/plan.md)。
 
@@ -10,7 +10,7 @@
 | --- | --- |
 | `src/` | 遊戲畫面（Svelte 5＋Vite 6）：標題、大廳、招募、角色養成、出擊編隊、戰鬥。戰鬥在裝置上用 wasm 引擎跑，打完把指令紀錄送給 Server |
 | `public/characters/` | 系列角色的半身像（90 年代版，沿用其他五款） |
-| `crates/legends-core/` | Rust 戰鬥引擎：牌氣回合制、敵人行動、自動戰鬥、Server 用的重算驗證。確定性：同樣的隊伍、關卡、種子、指令，一定得到同樣的結果 |
+| `crates/legends-core/` | Rust 戰鬥引擎：行動條回合制（Scheduler／Resolver／Effect／Trigger／Resource／State）、敵人 AI、自動戰鬥、Server 用的重算驗證。確定性：同樣的隊伍、關卡、種子、指令，一定得到同樣的結果 |
 | `crates/legends-wasm/` | 引擎的 WebAssembly 介面（`BattleSession`、`simulate`），`npm run build:wasm` 產生到 `pkg/engine/`，Client 與 Server 共用 |
 | `workers/api/` | Server（Cloudflare Workers＋D1）：帳號、轉蛋、庫存、養成、戰鬥票與重算驗證，見下面「Server」 |
 | `data/` | 角色、技能、敵人、關卡、卡池的資料（JSON）。Rust 引擎與 Server 讀同一份 |
