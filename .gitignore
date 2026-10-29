@@ -1,0 +1,12 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+crates/*/target/
+target/
+
+# wrangler 本機暫存
+.wrangler/
+
+# 本機設定
+.env*.local
