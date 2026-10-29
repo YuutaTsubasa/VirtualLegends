@@ -48,5 +48,30 @@
     "id": "alie.uniform", "character": "alie", "name": "麻將館制服", "rarity": 3, "suit": "man", "role": "attacker",
     "base": { "hp": 860, "atk": 116, "def": 40, "spd": 102 }, "growth": { "hp": 29, "atk": 6, "def": 2, "spd": 0 },
     "skills": ["strike", "alie.uniform.skill", "alie.uniform.ult"]
+  },
+  {
+    "id": "aming.rider", "character": "aming", "name": "深夜騎士", "rarity": 4, "suit": "man", "role": "attacker",
+    "base": { "hp": 900, "atk": 132, "def": 42, "spd": 110 }, "growth": { "hp": 30, "atk": 7, "def": 2, "spd": 0 },
+    "skills": ["strike", "aming.rider.skill", "aming.rider.ult"]
+  },
+  {
+    "id": "tangtang.idol", "character": "tangtang", "name": "糖霜偶像", "rarity": 4, "suit": "sou", "role": "support",
+    "base": { "hp": 960, "atk": 96, "def": 52, "spd": 124 }, "growth": { "hp": 32, "atk": 5, "def": 2, "spd": 0 },
+    "skills": ["strike", "tangtang.idol.skill", "tangtang.idol.ult"]
+  },
+  {
+    "id": "lanjie.qipao", "character": "lanjie", "name": "旗袍掌櫃", "rarity": 4, "suit": "pin", "role": "guardian",
+    "base": { "hp": 1160, "atk": 90, "def": 72, "spd": 98 }, "growth": { "hp": 39, "atk": 4, "def": 3, "spd": 0 },
+    "skills": ["strike", "lanjie.qipao.skill", "lanjie.qipao.ult"]
+  },
+  {
+    "id": "xiaocui.festival", "character": "xiaocui", "name": "夏日祭典", "rarity": 5, "suit": "sou", "role": "attacker",
+    "base": { "hp": 980, "atk": 146, "def": 46, "spd": 120 }, "growth": { "hp": 33, "atk": 8, "def": 2, "spd": 0 },
+    "skills": ["strike", "xiaocui.festival.skill", "xiaocui.festival.ult"]
+  },
+  {
+    "id": "yuehua.moonlit", "character": "yuehua", "name": "月下夜會", "rarity": 5, "suit": "honor", "role": "disruptor",
+    "base": { "hp": 1000, "atk": 134, "def": 54, "spd": 126 }, "growth": { "hp": 33, "atk": 7, "def": 3, "spd": 0 },
+    "skills": ["strike", "yuehua.moonlit.skill", "yuehua.moonlit.ult"]
   }
 ]

@@ -1,0 +1,17 @@
+[
+  {
+    "id": "standard",
+    "name": "常駐招募",
+    "cost": 100,
+    "ten_cost": 1000,
+    "rates": { "5": 300, "4": 1500, "3": 8200 },
+    "pity": 80,
+    "ten_min_rarity": 4,
+    "pool": [
+      "xiaocui.uniform", "yuehua.uniform", "aming.uniform", "tangtang.uniform", "xiaochun.uniform",
+      "lanjie.uniform", "cangya.uniform", "jinye.uniform", "leo.uniform", "alie.uniform",
+      "aming.rider", "tangtang.idol", "lanjie.qipao",
+      "xiaocui.festival", "yuehua.moonlit"
+    ]
+  }
+]

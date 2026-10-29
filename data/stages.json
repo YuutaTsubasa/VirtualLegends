@@ -1,5 +1,5 @@
 [
-  { "id": "1-1", "name": "雀館的怪聲", "waves": [["dice", "chip"], ["ghost", "dice", "chip"]] },
-  { "id": "1-2", "name": "後巷的籌碼", "scale": 125, "waves": [["chip", "chip", "dice"], ["ghost", "ghost", "chip"]] },
-  { "id": "1-10", "name": "千面莊家", "scale": 190, "waves": [["ghost", "dice"], ["chip", "dealer", "chip"]] }
+  {"id": "1-1", "name": "雀館的怪聲", "waves": [["dice", "chip"], ["ghost", "dice", "chip"]], "rewards": {"gold": 300, "notes": 20, "first_stardust": 100}},
+  {"id": "1-2", "name": "後巷的籌碼", "scale": 125, "waves": [["chip", "chip", "dice"], ["ghost", "ghost", "chip"]], "rewards": {"gold": 360, "notes": 25, "first_stardust": 100}},
+  {"id": "1-10", "name": "千面莊家", "scale": 190, "waves": [["ghost", "dice"], ["chip", "dealer", "chip"]], "rewards": {"gold": 800, "notes": 60, "first_stardust": 300}}
 ]

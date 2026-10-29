@@ -1,0 +1,19 @@
+[package]
+name = "legends-wasm"
+version = "0.1.0"
+description = "虛擬新傳說：把戰鬥引擎包成 WebAssembly，Client（瀏覽器、App）和 Server（Cloudflare Workers）共用"
+edition = "2021"
+rust-version = "1.89"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+legends-core = { path = "../legends-core" }
+serde = "1"
+serde_json = "1"
+wasm-bindgen = "0.2"
+
+[profile.release]
+opt-level = 3
+lto = true

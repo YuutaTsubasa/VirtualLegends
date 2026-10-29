@@ -1,0 +1,16 @@
+{
+  "name": "virtual-legends",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "虛擬新傳說：Virtual 系列的原創回合制轉蛋 RPG",
+  "scripts": {
+    "build:wasm": "wasm-pack build crates/legends-wasm --target web --release --out-dir ../../pkg/engine --no-pack",
+    "test": "npm run test:engine && npm run test:server",
+    "test:engine": "cargo test --release --manifest-path crates/legends-core/Cargo.toml",
+    "test:server": "npm run build:wasm && node --test \"workers/api/test/*.test.js\""
+  },
+  "devDependencies": {
+    "wasm-pack": "^0.13.1"
+  }
+}
