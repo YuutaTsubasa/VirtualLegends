@@ -1,0 +1,60 @@
+[
+  { "id": "strike", "name": "普攻", "kind": "basic", "target": "enemy", "effects": [{ "type": "damage", "power": 100 }] },
+
+  { "id": "xiaocui.uniform.skill", "name": "迴旋踢", "kind": "skill", "cost": 2, "target": "all_enemies",
+    "effects": [{ "type": "damage", "power": 75 }] },
+  { "id": "xiaocui.uniform.ult", "name": "旋風腿", "kind": "ultimate", "target": "all_enemies",
+    "effects": [{ "type": "damage", "power": 160 }] },
+
+  { "id": "yuehua.uniform.skill", "name": "月影", "kind": "skill", "cost": 1, "target": "enemy",
+    "effects": [{ "type": "damage", "power": 90 }, { "type": "steal", "count": 1 }] },
+  { "id": "yuehua.uniform.ult", "name": "月光波", "kind": "ultimate", "target": "all_enemies",
+    "effects": [{ "type": "damage", "power": 130 }, { "type": "buff", "stat": "def", "pct": -25, "turns": 2 }] },
+
+  { "id": "aming.uniform.skill", "name": "熱血直拳", "kind": "skill", "cost": 2, "target": "enemy",
+    "effects": [{ "type": "damage", "power": 200 }] },
+  { "id": "aming.uniform.ult", "name": "燃燒拳", "kind": "ultimate", "target": "enemy",
+    "effects": [{ "type": "damage", "power": 380 }] },
+
+  { "id": "tangtang.uniform.skill", "name": "糖果補給", "kind": "skill", "cost": 1, "target": "ally",
+    "effects": [{ "type": "heal", "power": 180 }] },
+  { "id": "tangtang.uniform.ult", "name": "糖果旋風", "kind": "ultimate", "target": "all_allies",
+    "effects": [{ "type": "heal", "power": 200 }, { "type": "buff", "stat": "atk", "pct": 20, "turns": 2 }] },
+
+  { "id": "xiaochun.uniform.skill", "name": "快攻", "kind": "skill", "cost": 1, "target": "enemy",
+    "effects": [{ "type": "damage", "power": 130 }, { "type": "draw", "count": 1 }] },
+  { "id": "xiaochun.uniform.ult", "name": "殺球", "kind": "ultimate", "target": "enemy",
+    "effects": [{ "type": "damage", "power": 340 }] },
+
+  { "id": "lanjie.uniform.skill", "name": "看場", "kind": "skill", "cost": 1, "target": "all_allies",
+    "effects": [{ "type": "shield", "power": 70 }] },
+  { "id": "lanjie.uniform.ult", "name": "推手", "kind": "ultimate", "target": "all_enemies",
+    "effects": [{ "type": "damage", "power": 120 }, { "type": "buff", "stat": "spd", "pct": -30, "turns": 2 }] },
+
+  { "id": "cangya.uniform.skill", "name": "嗅跡", "kind": "skill", "cost": 1, "target": "enemy",
+    "effects": [{ "type": "damage", "power": 100 }, { "type": "steal", "count": 1 }] },
+  { "id": "cangya.uniform.ult", "name": "狼牙突進", "kind": "ultimate", "target": "enemy",
+    "effects": [{ "type": "damage", "power": 300 }, { "type": "steal", "count": 2 }] },
+
+  { "id": "jinye.uniform.skill", "name": "加碼", "kind": "skill", "cost": 1, "target": "self",
+    "effects": [{ "type": "buff", "stat": "atk", "pct": 40, "turns": 3 }] },
+  { "id": "jinye.uniform.ult", "name": "豪賭震地", "kind": "ultimate", "target": "all_enemies",
+    "effects": [{ "type": "damage", "power": 180 }] },
+
+  { "id": "leo.uniform.skill", "name": "守護誓言", "kind": "skill", "cost": 1, "target": "ally",
+    "effects": [{ "type": "shield", "power": 150 }] },
+  { "id": "leo.uniform.ult", "name": "騎士衝鋒", "kind": "ultimate", "target": "enemy",
+    "effects": [{ "type": "damage", "power": 280 }, { "type": "buff", "stat": "atk", "pct": -25, "turns": 2 }] },
+
+  { "id": "alie.uniform.skill", "name": "重拳", "kind": "skill", "cost": 2, "target": "enemy",
+    "effects": [{ "type": "damage", "power": 210 }] },
+  { "id": "alie.uniform.ult", "name": "爆裂重拳", "kind": "ultimate", "target": "all_enemies",
+    "effects": [{ "type": "damage", "power": 165 }] },
+
+  { "id": "enemy.strike", "name": "撞擊", "kind": "basic", "target": "enemy", "effects": [{ "type": "damage", "power": 100 }] },
+  { "id": "enemy.burst", "name": "自摸衝擊", "kind": "ultimate", "target": "all_enemies",
+    "effects": [{ "type": "damage", "power": 110 }] },
+  { "id": "dealer.strike", "name": "莊家通殺", "kind": "basic", "target": "enemy", "effects": [{ "type": "damage", "power": 130 }] },
+  { "id": "dealer.ult", "name": "千面洗牌", "kind": "ultimate", "target": "all_enemies",
+    "effects": [{ "type": "damage", "power": 140 }, { "type": "steal", "count": 2 }] }
+]

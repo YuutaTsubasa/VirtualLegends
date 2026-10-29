@@ -1,0 +1,10 @@
+[
+  { "id": "dice", "name": "迷途骰子", "suit": "man", "stats": { "hp": 420, "atk": 150, "def": 26, "spd": 104 },
+    "skills": ["enemy.strike", "enemy.burst"] },
+  { "id": "chip", "name": "暴走籌碼", "suit": "pin", "stats": { "hp": 520, "atk": 128, "def": 40, "spd": 86 },
+    "skills": ["enemy.strike", "enemy.burst"] },
+  { "id": "ghost", "name": "牌桌幽靈", "suit": "sou", "stats": { "hp": 360, "atk": 165, "def": 20, "spd": 122 },
+    "skills": ["enemy.strike", "enemy.burst"] },
+  { "id": "dealer", "name": "千面莊家", "suit": "honor", "stats": { "hp": 3600, "atk": 230, "def": 50, "spd": 106 },
+    "skills": ["dealer.strike", "dealer.ult"] }
+]

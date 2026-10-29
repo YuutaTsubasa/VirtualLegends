@@ -1,0 +1,25 @@
+# 戰鬥引擎的測試（Client、Server 做好後再接 VirtualCore 的 build-apps／pages）
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy, rustfmt
+      - name: fmt
+        run: cargo fmt --manifest-path crates/legends-core/Cargo.toml --check
+      - name: clippy
+        run: cargo clippy --manifest-path crates/legends-core/Cargo.toml --release --all-targets -- -D warnings
+      - name: test
+        run: cargo test --manifest-path crates/legends-core/Cargo.toml --release
+      - name: wasm
+        run: cargo build --manifest-path crates/legends-core/Cargo.toml --release --target wasm32-unknown-unknown
