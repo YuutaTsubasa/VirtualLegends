@@ -1,4 +1,5 @@
 import { mount } from 'svelte';
+import 'bluebolt-ui/styles.css';
 import './app.css';
 import App from './App.svelte';
 

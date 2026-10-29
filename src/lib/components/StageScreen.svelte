@@ -1,8 +1,9 @@
 <script>
   // 選關與編隊：最多四人，同一位角色只能上一個版本。開打時 Server 用它記錄的等級組隊、發戰鬥票。
+  import { Panel, Button, SectionBar, Tag } from 'bluebolt-ui';
   import { session, startBattle } from '../api.svelte.js';
   import { t } from '../i18n.svelte.js';
-  import { COSTUMES, STAGES, ENEMIES } from '../data.js';
+  import { COSTUMES, STAGES, ENEMIES, ELEMENT_NAME } from '../data.js';
   import TopBar from './TopBar.svelte';
   import UnitCard from './UnitCard.svelte';
 
@@ -29,7 +30,7 @@
   const unlocked = (i) => i === 0 || clears[STAGES[i - 1].id] !== undefined;
   let stage = $state(STAGES.find((s, i) => unlocked(i) && clears[s.id] === undefined)?.id ?? STAGES[0].id);
   const current = $derived(STAGES.find((s) => s.id === stage));
-  const enemyNames = $derived([...new Set(current.waves.flat())].map((id) => t(ENEMIES.get(id).name)));
+  const enemies = $derived([...new Set(current.waves.flat())].map((id) => ENEMIES.get(id)));
 
   const levelOf = (id) => session.profile.costumes.find((c) => c.id === id)?.level;
 
@@ -59,42 +60,56 @@
   }
 </script>
 
-<TopBar title={t('出擊')} {onback} />
+<TopBar title={t('出擊')} en="Sortie" num="01" {onback} />
 
 <section class="stages">
-  <h3>{t('第一章　新傳說的入口')}</h3>
-  {#each STAGES as s, i (s.id)}
-    <button type="button" class="stage-item" class:on={s.id === stage} disabled={!unlocked(i)} onclick={() => (stage = s.id)}>
-      <span class="id">{s.id}</span>
-      <span class="name">{t(s.name)}</span>
-      {#if clears[s.id] !== undefined}<span class="clear">{t('通關')}</span>{:else if unlocked(i)}<span class="first">{t('首通 ✦{n}', { n: s.rewards.first_stardust })}</span>{/if}
-    </button>
-  {/each}
+  <SectionBar title={t('第一章　新傳說的入口')} en="Chapter 1" />
+  <ol>
+    {#each STAGES as s, i (s.id)}
+      <li style:--i={i}>
+        <button type="button" class:on={s.id === stage} disabled={!unlocked(i)} onclick={() => (stage = s.id)}>
+          <span class="code">{s.id}</span>
+          <span class="name">{t(s.name)}</span>
+          {#if s.env}<span class="env">{t(s.env.name)}</span>{/if}
+          {#if clears[s.id] !== undefined}<span class="clear">CLEAR</span>{:else if unlocked(i)}<span class="first">✦{s.rewards.first_stardust}</span>{:else}<span class="lock">LOCK</span>{/if}
+        </button>
+      </li>
+    {/each}
+  </ol>
 </section>
 
-<section class="team">
-  <div class="head">
-    <div>
-      <b>{current.id} {t(current.name)}</b>
-      <small>{t('{n} 波・敵人：{list}', { n: current.waves.length, list: enemyNames.join('、') })}</small>
-      <small>{t('獎勵：金幣 {g}・練習筆記 {n}', { g: current.rewards.gold, n: current.rewards.notes })}</small>
+<section class="side">
+  <Panel num={current.id} title={t(current.name)} sub={`${current.waves.length} Waves`} tone="glass" from="right">
+    <div class="foes">
+      {#each enemies as e (e.id)}
+        <span class="foe el-{e.element}"><span class="el-mark">{t(ELEMENT_NAME[e.element])}</span>{t(e.name)}{#if e.boss}<Tag variant="yellow" size="sm">BOSS</Tag>{/if}</span>
+      {/each}
     </div>
-    <button class="btn" type="button" disabled={team.length === 0 || session.busy} onclick={go}>{t('出擊！')}</button>
-  </div>
-  <p class="label">{t('隊伍（{n}／4）', { n: team.length })}</p>
+    {#if current.env}<p class="envtext"><Tag size="sm">{t(current.env.name)}</Tag> {t(current.env.text)}</p>{/if}
+    <p class="meta">
+      {t('獎勵：金幣 {g}・練習筆記 {n}', { g: current.rewards.gold, n: current.rewards.notes })}
+      ・{t('★ {n} 回合內', { n: current.star_turns })}
+    </p>
+  </Panel>
+
+  <SectionBar title={t('隊伍')} en={`Party ${team.length}/4`} />
   <div class="slots">
     {#each [0, 1, 2, 3] as i (i)}
       {#if team[i] && ownedIds.has(team[i])}
-        <UnitCard costume={team[i]} level={levelOf(team[i])} onclick={() => toggle(team[i])} />
+        <UnitCard costume={team[i]} level={levelOf(team[i])} num={i + 1} width={110} onclick={() => toggle(team[i])} />
       {:else}
-        <div class="empty">{t('空位')}</div>
+        <div class="empty">{i + 1}</div>
       {/if}
     {/each}
+    <div class="go">
+      <Button size="lg" en="Go" disabled={team.length === 0 || session.busy} onclick={go}>{t('出擊！')}</Button>
+    </div>
   </div>
-  <p class="label">{t('點角色加入或移出隊伍')}</p>
+
+  <SectionBar title={t('點角色加入或移出隊伍')} en="Members" />
   <div class="pool">
     {#each session.profile.costumes as c (c.id)}
-      <UnitCard costume={c.id} level={c.level} selected={team.includes(c.id)} onclick={() => toggle(c.id)} />
+      <UnitCard costume={c.id} level={c.level} selected={team.includes(c.id)} width={86} onclick={() => toggle(c.id)} />
     {/each}
   </div>
 </section>
@@ -102,116 +117,164 @@
 <style>
   .stages {
     position: absolute;
-    top: 10cqh;
-    left: 3cqh;
-    width: 46cqh;
-    bottom: 3cqh;
+    left: 40px;
+    top: 112px;
+    width: 420px;
+    bottom: 28px;
+  }
+
+  ol {
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 1.2cqh;
+    gap: 6px;
   }
 
-  .stages h3 {
-    margin: 0 0 1cqh;
-    color: var(--gold);
+  li {
+    padding-left: calc(var(--i) * 4px);
+    animation: in var(--bb-dur-4) var(--bb-ease) both;
+    animation-delay: calc(var(--i) * var(--bb-stagger));
   }
 
-  .stage-item {
+  @keyframes in {
+    from {
+      transform: translateX(calc(-40px * var(--bb-motion)));
+      opacity: 0;
+    }
+  }
+
+  li button {
+    width: 100%;
     display: flex;
     align-items: center;
-    gap: 1.6cqh;
-    padding: 1.4cqh 2cqh;
-    border: var(--line) solid var(--gold-deep);
-    border-radius: 1cqh;
-    background: rgba(0, 0, 0, 0.35);
+    gap: 12px;
+    padding: 8px 16px;
+    border: 0;
+    background: var(--bb-glass-strong);
+    box-shadow: inset 0 0 0 1px var(--bb-line);
+    clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
     text-align: left;
+    transition: transform var(--bb-dur-2) var(--bb-ease);
   }
 
-  .stage-item.on {
-    border-color: var(--gold);
-    background: linear-gradient(90deg, var(--accent-deep), rgba(0, 0, 0, 0.35));
+  li button:not(:disabled):hover {
+    transform: translateX(6px);
   }
 
-  .id {
-    font-weight: 800;
-    color: var(--gold);
-    width: 6cqh;
+  li button.on {
+    background: var(--bb-strip);
+    color: var(--bb-on-strip);
+  }
+
+  li button:disabled {
+    opacity: 0.45;
+  }
+
+  .code {
+    font: italic 400 22px var(--bb-font-display);
+    width: 46px;
+    color: var(--bb-blue-text);
+  }
+
+  .on .code {
+    color: var(--bb-yellow);
   }
 
   .name {
     flex: 1;
+    font-weight: 800;
+  }
+
+  .env {
+    font-size: 11px;
+    padding: 1px 8px;
+    background: var(--bb-blue-soft);
+    color: var(--bb-blue-text);
+  }
+
+  .clear,
+  .first,
+  .lock {
+    font: 700 12px var(--bb-font-cond);
+    letter-spacing: 0.12em;
   }
 
   .clear {
-    font-size: 0.7em;
-    background: var(--sou);
-    padding: 0.2cqh 1cqh;
-    border-radius: 0.6cqh;
+    color: var(--gale);
   }
 
   .first {
-    font-size: 0.7em;
-    color: #9fe0ff;
+    color: var(--bb-blue-2);
   }
 
-  .team {
+  .side {
     position: absolute;
-    top: 10cqh;
-    left: 52cqh;
-    right: 3cqh;
-    bottom: 3cqh;
+    left: 490px;
+    right: 40px;
+    top: 112px;
+    bottom: 28px;
     display: flex;
     flex-direction: column;
+    gap: 10px;
   }
 
-  .head {
+  .foes {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .head div {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .head small {
-    font-size: 0.75em;
-    opacity: 0.85;
-  }
-
-  .head .btn {
-    font-size: 1.3em;
-    padding: 1.4cqh 5cqh;
-  }
-
-  .label {
-    margin: 1.4cqh 0 0.8cqh;
-    font-size: 0.8em;
-    color: var(--gold);
-  }
-
-  .slots,
-  .pool {
-    display: flex;
-    gap: 1.6cqh;
-  }
-
-  .pool {
     flex-wrap: wrap;
-    overflow-y: auto;
-    padding: 1cqh 0.4cqh;
-    flex: 1;
-    align-content: flex-start;
+    gap: 8px 14px;
+  }
+
+  .foe {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .foe .el-mark {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+
+  .envtext,
+  .meta {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: var(--bb-ink-2);
+  }
+
+  .slots {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
   }
 
   .empty {
-    width: 15cqh;
-    height: 21cqh;
-    border: 0.3cqh dashed var(--gold-deep);
-    border-radius: 1cqh;
+    width: 110px;
+    height: 152px;
     display: grid;
     place-items: center;
-    opacity: 0.6;
+    border: 2px dashed var(--bb-line-2);
+    font: italic 400 40px var(--bb-font-display);
+    color: var(--bb-ink-4);
+  }
+
+  .go {
+    margin-left: auto;
+    align-self: center;
+  }
+
+  .pool {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    overflow-y: auto;
+    padding: 4px;
+    flex: 1;
+    align-content: flex-start;
   }
 </style>

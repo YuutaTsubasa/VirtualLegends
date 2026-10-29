@@ -1,53 +1,80 @@
 <script>
-  // 上方列：返回、標題、貨幣
+  // 上方列：返回、畫面標題（外框大數字＋英文標籤＋中文標題）、貨幣
+  import { Button } from 'bluebolt-ui';
   import { session } from '../api.svelte.js';
   import { t } from '../i18n.svelte.js';
 
-  let { title, onback = undefined } = $props();
+  let { title, en = '', num = '', onback = undefined } = $props();
 </script>
 
-<header>
+<header class="topbar">
   {#if onback}
-    <button class="back" type="button" onclick={onback} aria-label={t('返回')}>◀ {t('返回')}</button>
+    <Button shape="rect" variant="ink" size="sm" onclick={onback} aria-label={t('返回')}>« {t('返回')}</Button>
   {/if}
-  <h2>{title}</h2>
+  <div class="ttl">
+    {#if num}<span class="num" aria-hidden="true">{num}</span>{/if}
+    <span class="txt">
+      {#if en}<span class="en">{en}</span>{/if}
+      <h2>{title}</h2>
+    </span>
+  </div>
   {#if session.profile}
     <ul class="money">
-      <li title={t('星屑：招募用')}><span class="ic star">✦</span>{session.profile.stardust.toLocaleString()}</li>
-      <li title={t('金幣：升級、突破用')}><span class="ic gold">●</span>{session.profile.gold.toLocaleString()}</li>
-      <li title={t('練習筆記：升級用')}><span class="ic note">▤</span>{session.profile.notes.toLocaleString()}</li>
+      <li title={t('星屑：招募用')}><i class="ic star">✦</i><b>{session.profile.stardust.toLocaleString()}</b></li>
+      <li title={t('金幣：升級、突破用')}><i class="ic gold">●</i><b>{session.profile.gold.toLocaleString()}</b></li>
+      <li title={t('練習筆記：升級用')}><i class="ic note">▤</i><b>{session.profile.notes.toLocaleString()}</b></li>
     </ul>
   {/if}
 </header>
 
 <style>
-  header {
+  .topbar {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 9cqh;
+    top: 18px;
+    left: 40px;
+    right: 40px;
+    height: 76px;
     display: flex;
     align-items: center;
-    gap: 2cqh;
-    padding: 0 3cqh;
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+    gap: 20px;
     z-index: 5;
   }
 
-  .back {
-    background: rgba(0, 0, 0, 0.35);
-    border: var(--line) solid var(--gold);
-    border-radius: 0.8cqh;
-    padding: 0.6cqh 1.8cqh;
+  .ttl {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+  }
+
+  .num {
+    font: italic 400 72px/0.8 var(--bb-font-display);
+    color: transparent;
+    -webkit-text-stroke: 2px var(--bb-ink);
+  }
+
+  .txt {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .en {
+    background: var(--bb-strip);
+    color: var(--bb-on-strip);
+    font: italic 700 12px var(--bb-font-cond);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 2px 10px;
+    transform: skewX(var(--bb-skew));
   }
 
   h2 {
     margin: 0;
-    font-size: 1.3em;
-    letter-spacing: 0.15em;
-    color: var(--gold);
-    text-shadow: 0 0.3cqh 0 #000;
+    font-size: 34px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.06em;
   }
 
   .money {
@@ -55,31 +82,45 @@
     padding: 0;
     list-style: none;
     display: flex;
-    gap: 1.6cqh;
+    gap: 8px;
   }
 
   .money li {
-    background: rgba(0, 0, 0, 0.45);
-    border: 0.2cqh solid rgba(227, 181, 82, 0.5);
-    border-radius: 3cqh;
-    padding: 0.5cqh 2cqh 0.5cqh 1cqh;
-    font-variant-numeric: tabular-nums;
-    min-width: 14cqh;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 128px;
+    padding: 6px 16px 6px 10px;
+    background: var(--bb-strip);
+    color: var(--bb-on-strip);
+    clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  }
+
+  .money b {
+    margin-left: auto;
+    font: italic 400 20px var(--bb-font-display);
+    letter-spacing: 0.04em;
   }
 
   .ic {
-    display: inline-block;
-    width: 2.6cqh;
-    text-align: center;
-    margin-right: 0.6cqh;
+    font-style: normal;
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
   }
+
   .star {
-    color: #9fe0ff;
+    background: var(--bb-blue-2);
   }
   .gold {
-    color: var(--gold);
+    background: var(--bb-yellow);
+    color: var(--bb-on-yellow);
   }
   .note {
-    color: #f3d9a4;
+    background: #fff;
+    color: var(--bb-ink);
   }
 </style>

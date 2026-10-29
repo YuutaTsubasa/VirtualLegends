@@ -1,8 +1,8 @@
 <script>
   // 戰鬥畫面：引擎（wasm）在這台裝置上跑，玩家的每個指令都記下來，打完送給 Server 重算、發獎勵。
   // 操作：輪到某位隊友時選一招（S1～S3）→ 點目標 → 出手。聲援 3 格以上可以「接棒」，指定一位隊友緊接著出手。
-  // 外觀是暫時的；bluebolt-ui 的版本另外做。
   import { onMount, onDestroy } from 'svelte';
+  import { Button, Tag, Modal, ConfirmDialog } from 'bluebolt-ui';
   import { t } from '../i18n.svelte.js';
   import { session, finishBattle } from '../api.svelte.js';
   import { loadEngine, BattleSession } from '../engine.js';
@@ -323,9 +323,7 @@
     }
   }
 
-  function retreat() {
-    if (confirm(t('撤退的話這場不會有獎勵，確定嗎？'))) onexit();
-  }
+  let retreating = $state(false);
 
   const pct = (a, b) => `${Math.max(0, Math.min(100, (a / b) * 100))}%`;
   const isActing = (side, i) => (acting ? acting.side === side && acting.unit === i : side === 'ally' && current === i);
@@ -339,18 +337,18 @@
 {#if view}
   <div class="battle">
     <header>
-      <span class="info">
-        {t('第 {w}／{n} 波', { w: view.wave + 1, n: view.waves })}・{t('我方 {n} 回合', { n: view.turns })}
-        {#if view.env}<span class="env" title={t(view.env.text)}>{t(view.env.name)}：{t(view.env.text)}</span>{/if}
-      </span>
+      <span class="wave"><b>WAVE</b>{view.wave + 1}<small>／{view.waves}</small></span>
+      <span class="turns"><b>TURN</b>{view.turns}</span>
+      {#if view.env}<span class="env"><Tag variant="yellow" size="sm">{t(view.env.name)}</Tag>{t(view.env.text)}</span>{/if}
       <div class="tools">
-        <button type="button" class:on={auto} onclick={toggleAuto} disabled={view.phase !== 'command'}>{t('自動')}</button>
-        <button type="button" class:on={fast} onclick={() => (fast = !fast)}>{t('2 倍速')}</button>
-        <button type="button" onclick={retreat} disabled={view.phase !== 'command'}>{t('撤退')}</button>
+        <Button shape="rect" size="sm" variant={auto ? 'primary' : 'ghost'} onclick={toggleAuto} disabled={view.phase !== 'command'}>{t('自動')}</Button>
+        <Button shape="rect" size="sm" variant={fast ? 'primary' : 'ghost'} onclick={() => (fast = !fast)}>×2</Button>
+        <Button shape="rect" size="sm" variant="ink" onclick={() => (retreating = true)} disabled={view.phase !== 'command'}>{t('撤退')}</Button>
       </div>
     </header>
 
     <ol class="timeline" aria-label={t('出手順序')}>
+      <li class="lbl">ORDER</li>
       {#each view.timeline as w, k (k + w.side + w.unit)}
         {@const u = unitOf(w.side, w.unit)}
         <li class="tl tl-{w.side} el-{u.element}" class:now={k === 0}>
@@ -370,7 +368,7 @@
           {@const def = COSTUMES.get(a.id)}
           <button
             type="button"
-            class="ally rarity-{def.rarity} el-{a.element} pos-{i}"
+            class="unit ally rarity-{def.rarity} el-{a.element} pos-{i}"
             class:down={a.hp <= 0}
             class:acting={isActing('ally', i)}
             class:target={targetSide === 'ally' && sel.target === i}
@@ -379,13 +377,13 @@
             onclick={() => pickAlly(i)}
           >
             <img src={portrait(def.character, a.hp <= 0 ? 'sad' : view.phase === 'won' ? 'win' : 'normal')} alt="" draggable="false" />
-            <span class="el">{t(ELEMENT_NAME[a.element])}</span>
+            <span class="el-mark">{t(ELEMENT_NAME[a.element])}</span>
             <span class="nm">{allyName(i)}<small>{t(def.name)}</small></span>
             <span class="bars">
               <span class="bar hp"><i style:width={pct(a.hp, a.max_hp)}></i><s style:width={pct(a.shield, a.max_hp)}></s></span>
               <span class="bar gauge"><i style:width={pct(a.gauge, 1000)}></i></span>
             </span>
-            <span class="hpnum">{a.hp}</span>
+            <span class="hpnum">{a.hp}<small>／{a.max_hp}</small></span>
             <span class="sts">{#each a.statuses as s (s.kind)}<em class:bad={!isBuff(s.kind)}>{t(SHORT[s.kind])}{s.turns}</em>{/each}</span>
             {#if sel.relay === i}<span class="tag">{t('接棒')}</span>{/if}
             {#each pops.filter((p) => p.side === 'ally' && p.slot === i) as p (p.key)}<b class="pop {p.kind}">{p.text}</b>{/each}
@@ -397,7 +395,7 @@
         {#each view.enemies as e, i (i + '-' + view.wave)}
           <button
             type="button"
-            class="enemy el-{e.element} pos-{i}"
+            class="unit enemy el-{e.element} pos-{i}"
             class:boss={e.boss}
             class:down={e.hp <= 0}
             class:acting={isActing('enemy', i)}
@@ -407,7 +405,7 @@
           >
             {#if e.charge && e.hp > 0}<span class="charge">{t('蓄力 {n}', { n: e.charge.turns + 1 })}</span>{/if}
             <span class="tok">{t(ENEMIES.get(e.id).name).slice(0, 1)}</span>
-            <span class="nm">{enemyName(i)}<small>{t(ELEMENT_NAME[e.element])}</small></span>
+            <span class="nm"><span class="el-mark">{t(ELEMENT_NAME[e.element])}</span>{enemyName(i)}</span>
             {#if e.max_toughness}<span class="tough">{#each Array(e.max_toughness) as _, k (k)}<i class:on={k < e.toughness}></i>{/each}</span>{/if}
             <span class="bar hp"><i style:width={pct(e.hp, e.max_hp)}></i><s style:width={pct(e.shield, e.max_hp)}></s></span>
             <span class="bar gauge"><i style:width={pct(e.gauge, 1000)}></i></span>
@@ -418,34 +416,41 @@
       </div>
     </section>
 
-    <section class="command panel">
-      {#if auto}
-        <p class="hint">{t('自動戰鬥中…')}</p>
-      {:else if !actor}
-        <p class="hint">{playing ? '' : t('等待中…')}</p>
-      {:else}
-        <div class="who el-{actor.element}">
-          <b>{allyName(current)}</b>
-          <span class="cheer" title={t('聲援：每次我方出手 +1，花 {n} 格可以接棒', { n: view.relay_cost })}>
-            {#each Array(view.cheer_max) as _, k (k)}<i class:on={k < view.cheer}></i>{/each}
-          </span>
-          <button type="button" class="relay" class:on={sel.relayMode || sel.relay !== null} disabled={view.cheer < view.relay_cost} onclick={toggleRelay}>
-            {sel.relay !== null ? t('接棒：{name}', { name: allyName(sel.relay) }) : sel.relayMode ? t('點一位隊友') : t('接棒')}
-          </button>
-        </div>
-        <div class="skills">
-          {#each [0, 1, 2] as i (i)}
-            {@const s = skillOf(current, i)}
-            {@const cd = actor.cooldowns[i]}
-            <button type="button" class:on={sel.skill === i} disabled={!usable(i)} onclick={() => pickSkill(i)}>
-              <b>S{i + 1}・{t(s.name)}</b>
-              <small>{cd > 0 ? t('冷卻中（{n}）', { n: cd }) : cooldownText(s)}</small>
-            </button>
-          {/each}
-        </div>
-        {#if skill}<p class="desc">{skillText(skill)}</p>{/if}
-        <button class="btn go" type="button" disabled={problem !== ''} onclick={() => send(command())}>{t('出手')}</button>
-      {/if}
+    <section class="command">
+      <div class="main">
+        {#if auto}
+          <p class="hint">{t('自動戰鬥中…')}</p>
+        {:else if !actor}
+          <p class="hint">{playing ? '' : t('等待中…')}</p>
+        {:else}
+          <div class="who el-{actor.element}">
+            <span class="el-mark">{t(ELEMENT_NAME[actor.element])}</span>
+            <b>{allyName(current)}</b>
+            <span class="cheer" title={t('聲援：每次我方出手 +1，花 {n} 格可以接棒', { n: view.relay_cost })}>
+              <em>CHEER</em>
+              {#each Array(view.cheer_max) as _, k (k)}<i class:on={k < view.cheer}></i>{/each}
+            </span>
+            <Button shape="rect" size="sm" variant={sel.relayMode || sel.relay !== null ? 'accent' : 'ghost'} disabled={view.cheer < view.relay_cost} onclick={toggleRelay}>
+              {sel.relay !== null ? t('接棒：{name}', { name: allyName(sel.relay) }) : sel.relayMode ? t('點一位隊友') : t('接棒')}
+            </Button>
+          </div>
+          <div class="skills">
+            {#each [0, 1, 2] as i (i)}
+              {@const s = skillOf(current, i)}
+              {@const cd = actor.cooldowns[i]}
+              <button type="button" class:on={sel.skill === i} disabled={!usable(i)} onclick={() => pickSkill(i)}>
+                <span class="no">S{i + 1}</span>
+                <b>{t(s.name)}</b>
+                <small>{cd > 0 ? t('冷卻中（{n}）', { n: cd }) : cooldownText(s)}</small>
+              </button>
+            {/each}
+            <div class="go">
+              <Button size="lg" en="Action" disabled={problem !== ''} onclick={() => send(command())}>{t('出手')}</Button>
+            </div>
+          </div>
+          {#if skill}<p class="desc">{skillText(skill)}</p>{/if}
+        {/if}
+      </div>
       <ol class="log" aria-live="polite">
         {#each log as line, i (i + line)}<li>{line}</li>{/each}
       </ol>
@@ -453,38 +458,40 @@
 
     {#if banner}
       <div class="banner" class:foe={banner.enemy}>
+        <span class="band"></span>
         {#if banner.portrait}<img src={portrait(banner.portrait, 'happy')} alt="" draggable="false" />{/if}
-        <span>{banner.text}</span>
+        <span class="text">{banner.text}</span>
       </div>
     {/if}
 
-    {#if result}
-      <div class="scrim" role="dialog" aria-modal="true">
-        <div class="panel res">
-          <h3>{result.won ? t('勝利！') : t('敗北…')}</h3>
-          {#if result.pending}
-            <p>{t('伺服器驗證中…')}</p>
-          {:else if result.failed}
-            <p>{session.error || t('結算失敗')}</p>
+    <ConfirmDialog bind:open={retreating} title={t('撤退')} en="Retreat" danger message={t('撤退的話這場不會有獎勵，確定嗎？')} confirmLabel={t('撤退')} onconfirm={onexit} />
+
+    <Modal open={!!result} title={result?.won ? t('勝利！') : t('敗北…')} sub={result?.won ? 'Victory' : 'Defeat'} width="560px" dismissable={false}>
+      {#if result}
+        {#if result.pending}
+          <p>{t('伺服器驗證中…')}</p>
+        {:else if result.failed}
+          <p>{t('結算失敗')}</p>
+        {:else}
+          <ul class="stars">
+            <li class:on={stars[0]}>★ {t('通關')}</li>
+            <li class:on={stars[1]}>★ {t('{n} 回合內', { n: stage.star_turns })}</li>
+            <li class:on={stars[2]}>★ {t('沒有人倒下')}</li>
+          </ul>
+          {#if result.won}
+            <p>{t('我方 {n} 回合過關', { n: result.outcome.rounds })}</p>
+            <p>{t('金幣 +{g}・練習筆記 +{n}', { g: result.rewards.gold, n: result.rewards.notes })}</p>
+            {#if result.rewards.first}<p class="first">{t('首次通關：星屑 +{s}', { s: result.rewards.stardust })}</p>{/if}
           {:else}
-            <ul class="stars">
-              <li class:on={stars[0]}>★ {t('通關')}</li>
-              <li class:on={stars[1]}>★ {t('{n} 回合內', { n: stage.star_turns })}</li>
-              <li class:on={stars[2]}>★ {t('沒有人倒下')}</li>
-            </ul>
-            {#if result.won}
-              <p>{t('我方 {n} 回合過關', { n: result.outcome.rounds })}</p>
-              <p>{t('金幣 +{g}・練習筆記 +{n}', { g: result.rewards.gold, n: result.rewards.notes })}</p>
-              {#if result.rewards.first}<p class="first">{t('首次通關：星屑 +{s}', { s: result.rewards.stardust })}</p>{/if}
-            {:else}
-              <p>{t('練等級、換隊伍或調整出手順序再來一次吧。')}</p>
-            {/if}
+            <p>{t('練等級、換隊伍或調整出手順序再來一次吧。')}</p>
           {/if}
-          {#if result.desync}<p class="warn">{t('這台裝置跟伺服器的結果不一樣，獎勵以伺服器為準。')}</p>{/if}
-          <button class="btn" type="button" disabled={result.pending} onclick={onexit}>{t('返回')}</button>
-        </div>
-      </div>
-    {/if}
+        {/if}
+        {#if result.desync}<p class="warn">{t('這台裝置跟伺服器的結果不一樣，獎勵以伺服器為準。')}</p>{/if}
+      {/if}
+      {#snippet footer()}
+        <Button shape="rect" disabled={result?.pending} onclick={onexit}>{t('返回')}</Button>
+      {/snippet}
+    </Modal>
   </div>
 {/if}
 
@@ -494,88 +501,101 @@
     inset: 0;
   }
 
+  /* ---- 上方：波次、回合、環境、工具 ---- */
   header {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 7cqh;
-    padding: 0 2.4cqh;
+    top: 14px;
+    left: 24px;
+    right: 24px;
+    height: 44px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    background: rgba(0, 0, 0, 0.45);
+    gap: 18px;
+    z-index: 3;
   }
 
-  .info {
-    color: var(--gold);
-    font-weight: 700;
+  .wave,
+  .turns {
     display: flex;
-    gap: 2cqh;
-    align-items: center;
+    align-items: baseline;
+    gap: 6px;
+    padding: 2px 16px;
+    background: var(--bb-strip);
+    color: var(--bb-on-strip);
+    font: italic 400 26px var(--bb-font-display);
+    clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  }
+
+  .wave b,
+  .turns b {
+    font: italic 700 11px var(--bb-font-cond);
+    letter-spacing: 0.2em;
+    color: var(--bb-yellow);
+  }
+
+  .wave small {
+    font-size: 16px;
+    color: var(--bb-on-ink-2);
   }
 
   .env {
-    font-size: 0.75em;
-    color: var(--ivory);
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 0.6cqh;
-    padding: 0.3cqh 1.2cqh;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
   }
 
   .tools {
+    margin-left: auto;
     display: flex;
-    gap: 1cqh;
-  }
-
-  .tools button {
-    background: rgba(0, 0, 0, 0.35);
-    border: 0.2cqh solid var(--gold-deep);
-    border-radius: 0.8cqh;
-    padding: 0.5cqh 1.8cqh;
-  }
-
-  .tools button.on {
-    background: var(--accent);
-    border-color: var(--gold);
+    gap: 6px;
   }
 
   /* ---- 時間軸 ---- */
   .timeline {
     position: absolute;
-    top: 8.5cqh;
+    top: 68px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 1cqh;
+    align-items: center;
+    gap: 6px;
     margin: 0;
-    padding: 0;
+    padding: 6px 14px 6px 10px;
     list-style: none;
+    background: var(--bb-strip);
+    clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+    z-index: 3;
+  }
+
+  .lbl {
+    font: italic 700 11px var(--bb-font-cond);
+    letter-spacing: 0.2em;
+    color: var(--bb-yellow);
+    padding: 0 8px 0 10px;
   }
 
   .tl {
     position: relative;
-    width: 7cqh;
-    height: 7cqh;
-    border-radius: 50%;
+    width: 44px;
+    height: 44px;
     overflow: hidden;
-    border: 0.35cqh solid var(--el);
-    background: #111;
+    background: #1b2235;
+    box-shadow: inset 0 -3px 0 var(--el);
     display: grid;
     place-items: center;
+    clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
   }
 
   .tl.now {
-    width: 9cqh;
-    height: 9cqh;
-    margin-top: -1cqh;
-    box-shadow: 0 0 1.6cqh var(--gold);
-    border-color: var(--gold);
+    width: 58px;
+    height: 58px;
+    box-shadow: inset 0 0 0 3px var(--bb-yellow);
   }
 
   .tl.tl-enemy {
-    border-radius: 1cqh;
-    background: color-mix(in srgb, var(--el) 50%, #111);
+    background: color-mix(in srgb, var(--el) 45%, #1b2235);
   }
 
   .tl img {
@@ -586,24 +606,25 @@
   }
 
   .tl .tok {
+    color: #fff;
     font-weight: 900;
-    font-size: 1.2em;
+    font-size: 20px;
   }
 
   .ch {
     position: absolute;
-    right: 0;
+    right: 2px;
     bottom: 0;
-    font-size: 0.8em;
+    font-size: 13px;
   }
 
   /* ---- 場地：我方在左、敵人在右 ---- */
   .field {
     position: absolute;
-    top: 19cqh;
+    top: 136px;
     left: 0;
     right: 0;
-    height: 52cqh;
+    height: 380px;
   }
 
   .allies,
@@ -611,105 +632,114 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 76cqh;
+    width: 560px;
   }
 
   .allies {
-    left: 4cqh;
+    left: 30px;
   }
 
   .enemies {
-    right: 4cqh;
+    right: 30px;
   }
 
-  .ally,
-  .enemy {
+  .unit {
     position: absolute;
-    width: 34cqh;
-    height: 24cqh;
+    width: 250px;
+    height: 168px;
     padding: 0;
-    border-radius: 1.2cqh;
+    border: 0;
     text-align: left;
-    transition: transform 0.15s;
+    color: #fff;
+    transition: transform var(--bb-dur-2) var(--bb-ease);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
   }
 
   /* 前後兩排錯開 */
-  .ally.pos-0 { left: 38cqh; top: 0; }
-  .ally.pos-1 { left: 38cqh; top: 27cqh; }
-  .ally.pos-2 { left: 0; top: 4cqh; }
-  .ally.pos-3 { left: 0; top: 31cqh; }
+  .ally.pos-0 { left: 290px; top: 0; }
+  .ally.pos-1 { left: 290px; top: 186px; }
+  .ally.pos-2 { left: 0; top: 24px; }
+  .ally.pos-3 { left: 0; top: 210px; }
   .enemy.pos-0 { left: 0; top: 0; }
-  .enemy.pos-1 { left: 0; top: 27cqh; }
-  .enemy.pos-2 { left: 38cqh; top: 4cqh; }
-  .enemy.pos-3 { left: 38cqh; top: 31cqh; }
-  .enemy.pos-4 { left: 19cqh; top: 14cqh; }
-  .enemy.boss { left: 14cqh; top: 4cqh; width: 46cqh; height: 44cqh; }
+  .enemy.pos-1 { left: 0; top: 186px; }
+  .enemy.pos-2 { left: 290px; top: 24px; }
+  .enemy.pos-3 { left: 290px; top: 210px; }
+  .enemy.pos-4 { left: 145px; top: 105px; }
+  .enemy.boss { left: 90px; top: 6px; width: 380px; height: 366px; }
 
   .ally {
     overflow: hidden;
-    border: 0.4cqh solid var(--rarity);
-    background: radial-gradient(circle at 30% 30%, color-mix(in srgb, var(--el) 35%, #0a2a1f) 0%, #071a13 100%);
+    background: linear-gradient(115deg, color-mix(in srgb, var(--el) 55%, #0b0f1a) 0 34%, #141a2c 34%);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18), inset 0 -3px 0 var(--rarity);
   }
 
   .ally img {
     position: absolute;
-    right: -3cqh;
-    top: -1cqh;
-    height: 30cqh;
+    right: -24px;
+    top: -6px;
+    height: 220px;
   }
 
   .enemy {
-    border: var(--line) solid rgba(0, 0, 0, 0.5);
-    background: linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.25));
+    background:
+      repeating-linear-gradient(135deg, rgb(255 255 255 / 0.04) 0 6px, transparent 6px 12px),
+      linear-gradient(180deg, #2a1730, #120b18);
+    box-shadow: inset 0 0 0 1px rgb(255 80 100 / 0.35);
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     justify-content: flex-end;
-    gap: 0.6cqh;
-    padding: 1.2cqh 1.6cqh;
+    gap: 5px;
+    padding: 10px 14px 12px;
   }
 
   .enemy .tok {
-    width: 9cqh;
-    height: 9cqh;
-    border-radius: 50%;
+    align-self: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: auto;
     display: grid;
     place-items: center;
-    font-size: 2em;
+    font-size: 30px;
     font-weight: 900;
     background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--el) 40%, white), var(--el));
-    margin-bottom: auto;
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
   }
 
   .enemy.boss .tok {
-    width: 20cqh;
-    height: 20cqh;
-    font-size: 4em;
+    width: 170px;
+    height: 170px;
+    font-size: 80px;
   }
 
   .pickable {
     cursor: pointer;
   }
 
-  .enemy.pickable:hover,
-  .ally.pickable:hover {
-    transform: translateY(-0.6cqh);
+  .unit.pickable:hover {
+    transform: translateY(-4px);
   }
 
   .acting {
-    box-shadow: 0 0 2.4cqh var(--gold);
+    box-shadow: inset 0 0 0 3px var(--bb-yellow), 0 0 0 0 transparent;
   }
 
-  .ally.acting {
-    border-color: var(--gold);
+  .acting::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 60px;
+    height: 6px;
+    background: var(--bb-yellow);
   }
 
   .target {
-    outline: 0.5cqh solid var(--accent);
+    box-shadow: inset 0 0 0 3px #7fb6ff, inset 0 0 24px rgb(61 155 255 / 0.55);
   }
 
   .relay {
-    outline: 0.5cqh dashed var(--shield);
+    box-shadow: inset 0 0 0 3px var(--bb-yellow), inset 0 0 24px rgb(255 210 31 / 0.4);
   }
 
   .down {
@@ -717,63 +747,68 @@
     filter: grayscale(1);
   }
 
-  .el {
+  .ally > .el-mark {
     position: absolute;
-    top: 1cqh;
-    left: 1cqh;
-    width: 4cqh;
-    height: 4cqh;
-    border-radius: 0.6cqh;
-    display: grid;
-    place-items: center;
-    font-weight: 900;
-    background: var(--el);
+    top: 8px;
+    left: 8px;
   }
 
   .nm {
     display: flex;
     flex-direction: column;
-    font-weight: 800;
-    text-shadow: 0 0.3cqh 0.4cqh #000;
-    font-size: 0.85em;
+    font-weight: 900;
+    font-size: 16px;
+    text-shadow: 0 2px 4px #000;
+    z-index: 1;
   }
 
   .ally .nm {
     position: absolute;
-    left: 1.2cqh;
-    bottom: 7cqh;
+    left: 12px;
+    bottom: 56px;
   }
 
   .nm small {
-    font-size: 0.65em;
-    color: var(--gold);
+    font-size: 11px;
+    color: var(--bb-yellow);
   }
 
   .enemy .nm {
+    flex-direction: row;
     align-items: center;
+    gap: 6px;
+    font-size: 14px;
+  }
+
+  .enemy .nm .el-mark {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
   }
 
   .bars {
     position: absolute;
-    left: 1.2cqh;
-    right: 1.2cqh;
-    bottom: 3.4cqh;
+    left: 12px;
+    right: 12px;
+    bottom: 26px;
     display: flex;
     flex-direction: column;
-    gap: 0.4cqh;
+    gap: 3px;
+    z-index: 1;
   }
 
   .bar {
     position: relative;
+    display: block;
     width: 100%;
-    height: 1.3cqh;
-    background: rgba(0, 0, 0, 0.6);
-    border-radius: 1cqh;
+    height: 10px;
+    background: rgb(0 0 0 / 0.65);
+    transform: skewX(var(--bb-skew));
     overflow: hidden;
   }
 
   .bar.gauge {
-    height: 0.7cqh;
+    height: 5px;
   }
 
   .bar i,
@@ -782,89 +817,101 @@
     left: 0;
     top: 0;
     bottom: 0;
-    transition: width 0.25s;
+    transition: width 0.25s var(--bb-ease);
   }
 
   .bar.hp i {
     background: var(--hp);
   }
 
+  .enemy .bar.hp i {
+    background: var(--hp-foe);
+  }
+
   .bar.gauge i {
-    background: var(--gold);
+    background: var(--gauge);
   }
 
   .bar s {
     background: var(--shield);
-    opacity: 0.75;
+    opacity: 0.8;
   }
 
   .hpnum {
     position: absolute;
-    left: 1.2cqh;
-    bottom: 0.6cqh;
-    font-size: 0.6em;
-    font-variant-numeric: tabular-nums;
+    left: 12px;
+    bottom: 6px;
+    font: italic 400 16px var(--bb-font-display);
+    z-index: 1;
+  }
+
+  .hpnum small {
+    font-size: 11px;
+    opacity: 0.7;
   }
 
   .sts {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.4cqh;
-    min-height: 2.4cqh;
+    gap: 3px;
+    min-height: 16px;
+    z-index: 1;
   }
 
   .ally .sts {
     position: absolute;
-    right: 1cqh;
-    bottom: 0.4cqh;
+    right: 8px;
+    bottom: 6px;
     justify-content: flex-end;
+    max-width: 150px;
   }
 
   .sts em {
     font-style: normal;
-    font-size: 0.55em;
-    background: rgba(40, 120, 220, 0.85);
-    border-radius: 0.4cqh;
-    padding: 0 0.6cqh;
+    font-size: 10px;
+    font-weight: 800;
+    background: var(--bb-blue);
+    padding: 0 5px;
   }
 
   .sts em.bad {
-    background: rgba(200, 60, 40, 0.9);
+    background: #c8263a;
   }
 
   .tag,
   .charge {
     position: absolute;
-    top: 1cqh;
-    right: 1cqh;
-    background: var(--accent);
-    border: 0.25cqh solid var(--gold);
-    border-radius: 0.8cqh;
-    padding: 0.2cqh 1cqh;
-    font-weight: 800;
-    font-size: 0.7em;
+    top: 8px;
+    right: 8px;
+    background: var(--bb-yellow);
+    color: var(--bb-on-yellow);
+    padding: 2px 10px;
+    font-weight: 900;
+    font-size: 12px;
+    transform: skewX(var(--bb-skew));
+    z-index: 2;
   }
 
   .charge {
-    animation: blink 0.7s infinite alternate;
+    animation: blink 0.6s infinite alternate;
   }
 
   @keyframes blink {
     to {
-      filter: brightness(1.6);
+      background: #fff;
     }
   }
 
   .tough {
     display: flex;
-    gap: 0.4cqh;
+    gap: 4px;
   }
 
   .tough i {
-    width: 1.6cqh;
-    height: 1.6cqh;
+    width: 10px;
+    height: 10px;
     transform: rotate(45deg);
-    border: 0.2cqh solid var(--shield);
+    border: 1.5px solid var(--shield);
   }
 
   .tough i.on {
@@ -874,23 +921,23 @@
   .pop {
     position: absolute;
     left: 50%;
-    top: 35%;
+    top: 34%;
     transform: translateX(-50%);
-    font-size: 1.3em;
-    font-weight: 900;
+    font: italic 400 30px var(--bb-font-display);
     white-space: nowrap;
     pointer-events: none;
-    text-shadow: 0 0.3cqh 0 #000;
-    animation: rise 1.1s ease-out forwards;
-    z-index: 2;
+    -webkit-text-stroke: 1.5px #000;
+    paint-order: stroke fill;
+    animation: rise 1.1s var(--bb-ease) forwards;
+    z-index: 4;
   }
 
-  .pop.dmg { color: #ffd2c7; }
-  .pop.crit { color: #ffcf4a; font-size: 1.6em; }
-  .pop.graze { color: #c8c8c8; }
+  .pop.dmg { color: #fff; }
+  .pop.crit { color: var(--bb-yellow); font-size: 40px; }
+  .pop.graze { color: #c8c8c8; font-size: 22px; }
   .pop.heal { color: var(--hp); }
-  .pop.buff { color: var(--shield); }
-  .pop.debuff { color: #ff9f6b; }
+  .pop.buff { color: #8fd0ff; font: 900 20px var(--bb-font-zh); }
+  .pop.debuff { color: #ff9a7a; font: 900 20px var(--bb-font-zh); }
 
   @keyframes rise {
     from {
@@ -899,221 +946,244 @@
     }
     to {
       opacity: 0;
-      margin-top: -6cqh;
+      margin-top: -50px;
     }
   }
 
   /* ---- 指令 ---- */
   .command {
     position: absolute;
-    left: 3cqh;
-    right: 3cqh;
-    bottom: 2.4cqh;
-    height: 24cqh;
-    padding: 1.4cqh 2cqh;
-    font-size: 0.85em;
-    display: grid;
-    grid-template-columns: 1fr 50cqh;
-    grid-template-rows: auto auto 1fr;
-    column-gap: 2cqh;
+    left: 24px;
+    right: 24px;
+    bottom: 18px;
+    height: 170px;
+    display: flex;
+    gap: 12px;
+  }
+
+  .main {
+    flex: 1;
+    padding: 12px 18px;
+    background: rgb(11 15 26 / 0.9);
+    color: var(--bb-on-ink);
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    box-shadow: inset 0 3px 0 var(--bb-blue);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
   .hint {
     margin: 0;
-    grid-column: 1;
+    color: var(--bb-on-ink-2);
   }
 
   .who {
     display: flex;
     align-items: center;
-    gap: 1.6cqh;
+    gap: 10px;
   }
 
   .who b {
-    font-size: 1.2em;
-    border-left: 0.8cqh solid var(--el);
-    padding-left: 1cqh;
+    font-size: 20px;
+    font-weight: 900;
   }
 
   .cheer {
     display: flex;
-    gap: 0.6cqh;
+    align-items: center;
+    gap: 4px;
+    margin-left: 12px;
+  }
+
+  .cheer em {
+    font: italic 700 11px var(--bb-font-cond);
+    letter-spacing: 0.2em;
+    color: var(--bb-yellow);
+    margin-right: 4px;
   }
 
   .cheer i {
-    width: 2cqh;
-    height: 2cqh;
-    border-radius: 50%;
-    border: 0.25cqh solid var(--gold-deep);
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--bb-yellow);
+    transform: rotate(45deg) scale(0.8);
   }
 
   .cheer i.on {
-    background: var(--gold);
-  }
-
-  .relay {
-    background: var(--ivory-deep);
-    border: 0.25cqh solid var(--gold-deep);
-    border-radius: 0.8cqh;
-    padding: 0.3cqh 1.4cqh;
-    color: var(--ink);
-  }
-
-  .relay.on {
-    background: var(--shield);
+    background: var(--bb-yellow);
   }
 
   .skills {
     display: flex;
-    gap: 1cqh;
-    margin-top: 1cqh;
-    grid-column: 1;
+    gap: 10px;
+    align-items: stretch;
   }
 
-  .skills button {
+  .skills > button {
     flex: 1;
-    display: flex;
-    flex-direction: column;
+    max-width: 230px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 10px;
     align-items: center;
-    background: var(--ivory-deep);
-    color: var(--ink);
-    border: 0.25cqh solid var(--gold-deep);
-    border-radius: 0.8cqh;
-    padding: 0.6cqh;
+    padding: 8px 14px;
+    border: 0;
+    background: var(--bb-face-gray);
+    color: #fff;
+    text-align: left;
+    clip-path: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+    transition: transform var(--bb-dur-2) var(--bb-ease);
   }
 
-  .skills button.on {
-    background: var(--accent);
-    color: var(--ivory);
-    border-color: var(--gold);
+  .skills > button:not(:disabled):hover {
+    transform: translateY(-2px);
   }
 
-  .skills button:disabled {
-    opacity: 0.45;
+  .skills > button.on {
+    background: var(--bb-face-blue);
+    box-shadow: inset 0 -3px 0 var(--bb-yellow);
+  }
+
+  .skills > button:disabled {
+    opacity: 0.4;
+  }
+
+  .no {
+    grid-row: 1 / 3;
+    font: italic 400 30px var(--bb-font-display);
+    color: var(--bb-yellow);
+  }
+
+  .skills b {
+    font-size: 15px;
   }
 
   .skills small {
-    font-size: 0.75em;
-  }
-
-  .desc {
-    grid-column: 1;
-    margin: 0.8cqh 0 0;
-    font-size: 0.9em;
-    color: #4a4135;
+    font-size: 11px;
+    opacity: 0.8;
   }
 
   .go {
-    position: absolute;
-    right: 54cqh;
-    bottom: 1.4cqh;
-    padding: 1cqh 5cqh;
+    margin-left: auto;
+    align-self: center;
+  }
+
+  .desc {
+    margin: 0;
+    font-size: 13px;
+    color: var(--bb-on-ink-2);
   }
 
   .log {
-    grid-column: 2;
-    grid-row: 1 / 4;
+    width: 340px;
     margin: 0;
-    padding: 0.8cqh 1.2cqh;
+    padding: 10px 14px;
     list-style: none;
-    background: rgba(15, 59, 46, 0.1);
-    border-radius: 0.8cqh;
-    font-size: 0.8em;
-    color: #3a3326;
+    background: var(--bb-glass-strong);
+    box-shadow: inset 0 0 0 1px var(--bb-line);
+    font-size: 12px;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    gap: 0.2cqh;
+    gap: 2px;
     overflow: hidden;
   }
 
-  /* ---- 演出 ---- */
+  .log li {
+    border-left: 2px solid var(--bb-blue);
+    padding-left: 6px;
+  }
+
+  /* ---- 大招特寫 ---- */
   .banner {
     position: absolute;
-    top: 30cqh;
     left: 0;
     right: 0;
-    height: 22cqh;
+    top: 230px;
+    height: 170px;
+    pointer-events: none;
+    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 3cqh;
-    background: linear-gradient(90deg, transparent, rgba(210, 64, 47, 0.85) 20%, rgba(210, 64, 47, 0.85) 80%, transparent);
-    transform: skewY(-4deg);
-    pointer-events: none;
-    animation: slide 0.3s ease-out;
-    z-index: 10;
+    gap: 30px;
     overflow: hidden;
   }
 
-  .banner.foe {
-    background: linear-gradient(90deg, transparent, rgba(60, 30, 110, 0.9) 20%, rgba(60, 30, 110, 0.9) 80%, transparent);
+  .band {
+    position: absolute;
+    inset: 0;
+    background:
+      repeating-linear-gradient(90deg, rgb(255 255 255 / 0.08) 0 2px, transparent 2px 22px),
+      var(--bb-face-blue);
+    border-top: 6px solid var(--bb-yellow);
+    border-bottom: 6px solid var(--bb-ink);
+    transform: skewY(-3deg);
+    animation: band 0.32s var(--bb-ease);
+  }
+
+  .banner.foe .band {
+    background:
+      repeating-linear-gradient(90deg, rgb(255 255 255 / 0.06) 0 2px, transparent 2px 22px),
+      linear-gradient(180deg, #4a1530, #1b0a14);
+    border-top-color: #ff4d5e;
+  }
+
+  @keyframes band {
+    from {
+      transform: skewY(-3deg) scaleX(0);
+    }
   }
 
   .banner img {
-    height: 40cqh;
-    margin-top: 16cqh;
-    transform: skewY(4deg);
+    position: relative;
+    height: 330px;
+    margin-top: 150px;
+    animation: slide 0.4s var(--bb-ease);
   }
 
-  .banner span {
-    font-size: 3em;
+  .text {
+    position: relative;
+    font-size: 60px;
     font-weight: 900;
     letter-spacing: 0.2em;
-    color: var(--ivory);
-    -webkit-text-stroke: 0.3cqh #000;
+    color: #fff;
+    -webkit-text-stroke: 2px var(--bb-ink);
     paint-order: stroke fill;
-    transform: skewY(4deg);
+    font-style: italic;
+    animation: slide 0.4s var(--bb-ease) 0.05s both;
   }
 
   @keyframes slide {
     from {
-      transform: skewY(-4deg) translateX(-30%);
+      transform: translateX(-120px);
       opacity: 0;
     }
-  }
-
-  .scrim {
-    position: absolute;
-    inset: 0;
-    background: var(--scrim);
-    display: grid;
-    place-items: center;
-    z-index: 20;
-  }
-
-  .res {
-    width: 64cqh;
-    padding: 3cqh;
-    text-align: center;
-  }
-
-  .res h3 {
-    margin: 0 0 1cqh;
-    font-size: 2em;
   }
 
   .stars {
     list-style: none;
     padding: 0;
+    margin: 0 0 12px;
     display: flex;
-    justify-content: center;
-    gap: 2cqh;
-    color: #9a8f78;
+    gap: 16px;
+    color: var(--bb-ink-4);
+    font-weight: 700;
   }
 
   .stars li.on {
-    color: #d49a00;
-    font-weight: 800;
+    color: #c79a00;
   }
 
   .first {
-    color: var(--tide);
+    color: var(--bb-blue-text);
     font-weight: 800;
   }
 
   .warn {
-    color: var(--accent-deep);
-    font-size: 0.8em;
+    color: #c8263a;
+    font-size: 13px;
   }
 </style>

@@ -1,8 +1,9 @@
 <script>
   // 角色一覽與養成：升級、突破。花費與上限 Server 會再檢查一次，這裡只是先算給玩家看。
+  import { Panel, Button, StatList, Tag, SectionBar } from 'bluebolt-ui';
   import { session, levelUp, ascend } from '../api.svelte.js';
   import { t } from '../i18n.svelte.js';
-  import { COSTUMES, SKILLS, ELEMENT_NAME, ROLE_NAME, unitName, characterOf, unitStats, levelCap, levelCost, ascendCost, skillText, cooldownText, passiveText } from '../data.js';
+  import { COSTUMES, SKILLS, ELEMENT_NAME, ROLE_NAME, characterOf, unitStats, levelCap, levelCost, ascendCost, skillText, cooldownText, passiveText } from '../data.js';
   import { portrait } from '../characters.js';
   import TopBar from './TopBar.svelte';
   import UnitCard from './UnitCard.svelte';
@@ -35,207 +36,247 @@
   const run = (fn) => fn().catch(() => {});
 </script>
 
-<TopBar title={t('角色')} {onback} />
-
-<section class="list">
-  {#each owned as c (c.id)}
-    <UnitCard costume={c.id} level={c.level} selected={unit?.id === c.id} onclick={() => (picked = c.id)} />
-  {/each}
-</section>
+<TopBar title={t('角色')} en="Roster" num="03" {onback} />
 
 {#if unit}
-  <section class="detail panel">
-    <img class="por" src={portrait(ch.id, 'happy')} alt="" draggable="false" />
-    <div class="body">
-      <h3>
-        <span class="stars rarity-{def.rarity}">{'★'.repeat(def.rarity)}</span>
-        {unitName(unit.id)}
-      </h3>
-      <p class="tags">
-        <span class="tag el-{def.element}">{t(ELEMENT_NAME[def.element])}</span>
-        <span class="tag">{t(ROLE_NAME[def.role])}</span>
-        <span>{t(ch.intro)}</span>
-      </p>
-      <dl class="stats">
-        <div><dt>Lv</dt><dd>{unit.level}／{cap}</dd></div>
-        <div><dt>{t('突破')}</dt><dd>{unit.ascension}／5（{t('存 {n}', { n: unit.dupes })}）</dd></div>
-        <div><dt>{t('羈絆')}</dt><dd>{bond.level}（{bond.exp}）</dd></div>
-        <div><dt>HP</dt><dd>{stats.hp}</dd></div>
-        <div><dt>{t('攻擊')}</dt><dd>{stats.atk}</dd></div>
-        <div><dt>{t('防禦')}</dt><dd>{stats.def}</dd></div>
-        <div><dt>{t('速度')}</dt><dd>{stats.spd}</dd></div>
-        <div><dt>{t('暴擊')}</dt><dd>{stats.crit}%</dd></div>
-        <div><dt>{t('暴擊傷害')}</dt><dd>{stats.crit_dmg}%</dd></div>
-        <div><dt>{t('效果命中')}</dt><dd>{stats.hit}%</dd></div>
-        <div><dt>{t('效果抵抗')}</dt><dd>{stats.resist}%</dd></div>
-      </dl>
-      <ul class="skills">
-        {#each def.skills as id, i (id)}
-          {@const s = SKILLS.get(id)}
-          <li>
-            <b>S{i + 1}・{t(s.name)}<small>{cooldownText(s)}</small></b>
-            <span>{skillText(s)}</span>
-          </li>
-        {/each}
-        {#each def.passives ?? [] as p (p.name)}
-          <li>
-            <b>{t('被動')}・{t(p.name)}</b>
-            <span>{passiveText(p)}</span>
-          </li>
-        {/each}
-      </ul>
-      <div class="actions">
-        {#each steps as s (s.n)}
-          <button class="btn sub" type="button" disabled={!s.ok || session.busy} onclick={() => run(() => levelUp(unit.id, s.to - unit.level))}>
-            Lv {s.to}<small>● {s.gold}・▤ {s.notes}</small>
-          </button>
-        {/each}
-        <button class="btn" type="button" disabled={!canAscend || session.busy} onclick={() => run(() => ascend(unit.id))}>
-          {t('突破')}<small>● {ascendCost(unit.ascension)}</small>
-        </button>
+  <section class="detail el-{def.element}">
+    <Panel tone="ink" from="left" pad={false}>
+      <div class="head">
+        <img class="por" src={portrait(ch.id, 'happy')} alt="" draggable="false" />
+        <div class="who">
+          <span class="stars rarity-{def.rarity}">{'★'.repeat(def.rarity)}</span>
+          <h3>{t(ch.name)}<small>{t(def.name)}</small></h3>
+          <p class="tags">
+            <span class="el-mark">{t(ELEMENT_NAME[def.element])}</span>
+            <Tag variant="blue" size="sm">{t(ROLE_NAME[def.role])}</Tag>
+          </p>
+          <p class="lv">Lv.<b>{unit.level}</b><span>／{cap}</span></p>
+          <p class="sub">{t('突破')} {unit.ascension}／5（{t('存 {n}', { n: unit.dupes })}）・{t('羈絆')} {bond.level}（{bond.exp}）</p>
+        </div>
       </div>
-      <p class="hint">
-        {t('突破要先練到等級上限，並且再抽到同一個角色。同一位角色的所有版本共用羈絆：練任何一個都會加，羈絆每一級全能力 +1%。')}
-      </p>
-    </div>
+      <div class="body">
+        <div class="actions">
+          {#each steps as s (s.n)}
+            <Button shape="rect" size="sm" disabled={!s.ok || session.busy} onclick={() => run(() => levelUp(unit.id, s.to - unit.level))}>
+              Lv {s.to}<small>● {s.gold}・▤ {s.notes}</small>
+            </Button>
+          {/each}
+          <Button shape="rect" size="sm" variant="secondary" disabled={!canAscend || session.busy} onclick={() => run(() => ascend(unit.id))}>
+            {t('突破')}<small>● {ascendCost(unit.ascension)}</small>
+          </Button>
+        </div>
+        <StatList
+          columns={2}
+          items={[
+            { icon: '♥', label: 'HP', value: stats.hp },
+            { icon: '»', label: t('速度'), value: stats.spd },
+            { icon: '⚔', label: t('攻擊'), value: stats.atk },
+            { icon: '◆', label: t('防禦'), value: stats.def },
+            { icon: '✦', label: t('暴擊'), value: `${stats.crit}%` },
+            { icon: '✧', label: t('暴擊傷害'), value: `${stats.crit_dmg}%` },
+            { icon: '◎', label: t('效果命中'), value: `${stats.hit}%` },
+            { icon: '◇', label: t('效果抵抗'), value: `${stats.resist}%` },
+          ]}
+        />
+        <ul class="skills">
+          {#each def.skills as id, i (id)}
+            {@const s = SKILLS.get(id)}
+            <li>
+              <b><span class="slot">S{i + 1}</span>{t(s.name)}<small>{cooldownText(s)}</small></b>
+              <span>{skillText(s)}</span>
+            </li>
+          {/each}
+          {#each def.passives ?? [] as p (p.name)}
+            <li>
+              <b><span class="slot">P</span>{t(p.name)}</b>
+              <span>{passiveText(p)}</span>
+            </li>
+          {/each}
+        </ul>
+      </div>
+    </Panel>
   </section>
 {/if}
 
-<style>
-  .list {
-    position: absolute;
-    top: 10cqh;
-    bottom: 3cqh;
-    left: 3cqh;
-    width: 70cqh;
-    overflow-y: auto;
-    display: grid;
-    grid-template-columns: repeat(4, 15cqh);
-    gap: 2cqh;
-    align-content: start;
-    padding: 1cqh;
-  }
+<section class="list">
+  <SectionBar title={t('手上的角色')} en={`${owned.length} Units`} />
+  <div class="grid">
+    {#each owned as c, i (c.id)}
+      <UnitCard costume={c.id} level={c.level} num={i + 1} selected={unit?.id === c.id} onclick={() => (picked = c.id)} />
+    {/each}
+  </div>
+  <p class="hint">{t('突破要先練到等級上限，並且再抽到同一個角色。同一位角色的所有版本共用羈絆：練任何一個都會加，羈絆每一級全能力 +1%。')}</p>
+</section>
 
+<style>
   .detail {
     position: absolute;
-    top: 10cqh;
-    bottom: 3cqh;
-    left: 76cqh;
-    right: 3cqh;
-    display: flex;
+    left: 40px;
+    top: 112px;
+    bottom: 28px;
+    width: 520px;
+  }
+
+  .detail :global(.bb-panel) {
+    height: 100%;
     overflow: hidden;
   }
 
+  .head {
+    position: relative;
+    display: flex;
+    height: 180px;
+    overflow: hidden;
+    background: linear-gradient(110deg, color-mix(in srgb, var(--el) 70%, #000) 0 40%, transparent 40%), linear-gradient(180deg, #1b2440, #0b0f1a);
+  }
+
   .por {
-    width: 36cqh;
-    object-fit: cover;
-    object-position: 50% 8%;
-    background: radial-gradient(circle at 50% 30%, #fff 0%, var(--ivory-deep) 80%);
+    position: absolute;
+    left: -10px;
+    top: -6px;
+    height: 260px;
   }
 
-  .body {
-    flex: 1;
-    padding: 2cqh 2.6cqh;
-    overflow-y: auto;
-    font-size: 0.85em;
-  }
-
-  h3 {
-    margin: 0;
-    font-size: 1.4em;
+  .who {
+    margin-left: 200px;
+    padding: 14px 16px 0 0;
+    color: var(--bb-on-ink);
   }
 
   .stars {
-    color: color-mix(in srgb, var(--rarity) 70%, #6b4a00);
+    color: var(--rarity);
+    letter-spacing: 2px;
+  }
+
+  h3 {
+    margin: 2px 0 6px;
+    font-size: 30px;
+    font-weight: 900;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  h3 small {
+    font-size: 15px;
+    color: var(--bb-yellow);
   }
 
   .tags {
     display: flex;
-    gap: 1cqh;
     align-items: center;
-    margin: 0.8cqh 0;
-  }
-
-  .tag {
-    background: var(--el, var(--felt));
-    color: var(--ivory);
-    padding: 0.2cqh 1cqh;
-    border-radius: 0.6cqh;
-    font-weight: 700;
-  }
-
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.6cqh 2cqh;
-    white-space: nowrap;
-    margin: 1cqh 0;
-  }
-
-  .stats div {
-    display: flex;
-    justify-content: space-between;
-    border-bottom: 0.15cqh solid var(--ivory-deep);
-  }
-
-  dt {
-    color: #6c5f45;
-  }
-
-  dd {
+    gap: 8px;
     margin: 0;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
+  }
+
+  .lv {
+    margin: 8px 0 0;
+    font-size: 14px;
+  }
+
+  .lv b {
+    font: italic 400 34px/1 var(--bb-font-display);
+    margin-left: 4px;
+  }
+
+  .lv span {
+    color: var(--bb-on-ink-2);
+  }
+
+  .sub {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: var(--bb-on-ink-2);
+  }
+
+  .body {
+    padding: 14px 16px 16px;
+    color: var(--bb-on-ink);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: calc(100% - 180px);
+    overflow-y: auto;
   }
 
   .skills {
     list-style: none;
+    margin: 0;
     padding: 0;
-    margin: 1cqh 0;
     display: grid;
-    gap: 0.8cqh;
+    gap: 6px;
   }
 
   .skills li {
     display: flex;
     flex-direction: column;
-    background: rgba(15, 59, 46, 0.08);
-    border-radius: 0.8cqh;
-    padding: 0.6cqh 1.2cqh;
+    gap: 2px;
+    padding: 6px 10px;
+    background: rgb(255 255 255 / 0.06);
+    border-left: 3px solid var(--bb-blue-2);
+    font-size: 13px;
+  }
+
+  .skills b {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  .slot {
+    font: italic 400 15px var(--bb-font-display);
+    color: var(--bb-yellow);
   }
 
   .skills small {
-    margin-left: 1cqh;
+    margin-left: auto;
     font-weight: 400;
-    color: #6c5f45;
+    color: var(--bb-on-ink-2);
+    font-size: 11px;
   }
 
-  .skills span {
-    font-size: 0.9em;
-    color: #4a4135;
+  .skills li > span {
+    color: var(--bb-on-ink-2);
   }
 
   .actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 1cqh;
-  }
-
-  .actions .btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 0.8cqh 2cqh;
-    font-size: 0.95em;
+    gap: 8px;
   }
 
   .actions small {
-    font-size: 0.75em;
+    margin-left: 8px;
+    font-size: 11px;
     font-weight: 400;
+    opacity: 0.85;
+  }
+
+  .list {
+    position: absolute;
+    left: 590px;
+    right: 40px;
+    top: 112px;
+    bottom: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(5, 120px);
+    gap: 14px 12px;
+    align-content: start;
+    overflow-y: auto;
+    padding: 4px;
+    flex: 1;
   }
 
   .hint {
-    color: #6c5f45;
-    font-size: 0.85em;
+    margin: 0;
+    font-size: 12px;
+    color: var(--bb-ink-2);
   }
 </style>
