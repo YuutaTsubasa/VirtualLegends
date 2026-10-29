@@ -1,10 +1,10 @@
 [
-  { "id": "dice", "name": "迷途骰子", "suit": "man", "stats": { "hp": 420, "atk": 150, "def": 26, "spd": 104 },
-    "skills": ["enemy.strike", "enemy.burst"] },
-  { "id": "chip", "name": "暴走籌碼", "suit": "pin", "stats": { "hp": 520, "atk": 128, "def": 40, "spd": 86 },
-    "skills": ["enemy.strike", "enemy.burst"] },
-  { "id": "ghost", "name": "牌桌幽靈", "suit": "sou", "stats": { "hp": 360, "atk": 165, "def": 20, "spd": 122 },
-    "skills": ["enemy.strike", "enemy.burst"] },
-  { "id": "dealer", "name": "千面莊家", "suit": "honor", "stats": { "hp": 3600, "atk": 230, "def": 50, "spd": 106 },
-    "skills": ["dealer.strike", "dealer.ult"] }
+  {"id": "noise_slime", "name": "雜訊史萊姆", "element": "tide", "stats": {"hp": 450, "atk": 128, "def": 30, "spd": 88}, "skills": ["slime.s1"]},
+  {"id": "pixel_bat", "name": "像素蝙蝠", "element": "gale", "stats": {"hp": 320, "atk": 141, "def": 20, "spd": 125}, "skills": ["bat.s1", "bat.s2"]},
+  {"id": "bug_knight", "name": "錯誤騎士", "element": "blaze", "stats": {"hp": 700, "atk": 148, "def": 60, "spd": 92}, "skills": ["knight.s1", "knight.s2"], "toughness": 3},
+  {"id": "loop_shade", "name": "迴圈幽影", "element": "dusk", "stats": {"hp": 400, "atk": 155, "def": 25, "spd": 110}, "skills": ["shade.s1", "shade.s2"]},
+  {"id": "firewall", "name": "防火牆", "element": "blaze", "stats": {"hp": 700, "atk": 108, "def": 70, "spd": 80}, "skills": ["wall.s1", "wall.s2"], "toughness": 3},
+  {"id": "cache_wisp", "name": "快取精靈", "element": "gale", "stats": {"hp": 350, "atk": 121, "def": 25, "spd": 115}, "skills": ["wisp.s1", "wisp.s2"]},
+  {"id": "sentinel", "name": "失控的守衛程式", "element": "blaze", "stats": {"hp": 2100, "atk": 168, "def": 60, "spd": 100, "resist": 20}, "skills": ["sentinel.s1", "sentinel.s2"], "toughness": 4, "boss": true},
+  {"id": "gatekeeper", "name": "裂界守門者", "element": "dusk", "stats": {"hp": 4500, "atk": 202, "def": 70, "spd": 105, "resist": 30}, "skills": ["gate.s1", "gate.s2", "gate.s3"], "toughness": 6, "boss": true, "phases": [{"hp_below": 50, "name": "過載", "effects": [{"type": "status", "status": "atk_up", "turns": 9, "to": "self"}, {"type": "status", "status": "immune", "turns": 2, "to": "self"}]}]}
 ]

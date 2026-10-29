@@ -76,7 +76,7 @@ test('重複抽到變成突破次數，滿了換星屑與羈絆', async () => {
     ['new', 'dupe', 'dupe', 'dupe', 'dupe', 'dupe', 'overflow'],
   );
   const last = results[6].profile;
-  assert.equal(last.costumes.find((c) => c.id === 'alie.uniform').dupes, 5);
+  assert.equal(last.costumes.find((c) => c.id === 'alie.daily').dupes, 5);
   assert.equal(last.bonds.alie.exp, 20);
   assert.equal(last.stardust, 100000 - 700 + 10);
 });

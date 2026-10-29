@@ -1,5 +1,5 @@
 // 系列共通的角色資料：id、名字、簡介、配色沿用其他五款（VirtualQuest 的 src/lib/game/characters.js），
-// 半身像（public/characters/<id>/<表情>.webp）是 90 年代版、麻將館那套衣服。
+// 半身像（public/characters/<id>/<表情>.webp）是 90 年代版的系列共通圖，本作當 ★3「日常」用。
 // 之後若搬進 VirtualCore，這份改成從那裡匯入。
 const BASE = import.meta.env.BASE_URL;
 

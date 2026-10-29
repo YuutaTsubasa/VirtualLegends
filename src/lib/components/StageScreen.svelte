@@ -62,7 +62,7 @@
 <TopBar title={t('出擊')} {onback} />
 
 <section class="stages">
-  <h3>{t('第一章　雀館的怪聲')}</h3>
+  <h3>{t('第一章　新傳說的入口')}</h3>
   {#each STAGES as s, i (s.id)}
     <button type="button" class="stage-item" class:on={s.id === stage} disabled={!unlocked(i)} onclick={() => (stage = s.id)}>
       <span class="id">{s.id}</span>

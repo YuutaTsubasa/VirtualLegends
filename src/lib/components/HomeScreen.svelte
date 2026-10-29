@@ -24,7 +24,7 @@
   }
 </script>
 
-<TopBar title={t('雀館大廳')} />
+<TopBar title={t('大廳')} />
 
 <img class="leader" src={portrait(leader, 'happy')} alt="" draggable="false" />
 

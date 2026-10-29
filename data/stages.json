@@ -1,5 +1,12 @@
 [
-  {"id": "1-1", "name": "雀館的怪聲", "waves": [["dice", "chip"], ["ghost", "dice", "chip"]], "rewards": {"gold": 300, "notes": 20, "first_stardust": 100}},
-  {"id": "1-2", "name": "後巷的籌碼", "scale": 125, "waves": [["chip", "chip", "dice"], ["ghost", "ghost", "chip"]], "rewards": {"gold": 360, "notes": 25, "first_stardust": 100}},
-  {"id": "1-10", "name": "千面莊家", "scale": 190, "waves": [["ghost", "dice"], ["chip", "dealer", "chip"]], "rewards": {"gold": 800, "notes": 60, "first_stardust": 300}}
+  {"id": "1-1", "name": "入口的雜訊", "scale": 100, "waves": [["noise_slime", "noise_slime"], ["noise_slime", "pixel_bat"]], "star_turns": 8, "rewards": {"gold": 300, "notes": 20, "first_stardust": 100}},
+  {"id": "1-2", "name": "像素森林", "scale": 115, "waves": [["pixel_bat", "pixel_bat"], ["noise_slime", "pixel_bat", "noise_slime"]], "star_turns": 10, "env": {"name": "狂風", "text": "所有人速度 +15", "mods": [{"stat": "spd", "add": 15}]}, "rewards": {"gold": 340, "notes": 22, "first_stardust": 100}},
+  {"id": "1-3", "name": "錯誤的騎士", "scale": 130, "waves": [["noise_slime", "bug_knight"], ["pixel_bat", "bug_knight", "pixel_bat"]], "star_turns": 20, "rewards": {"gold": 380, "notes": 25, "first_stardust": 100}},
+  {"id": "1-4", "name": "迴圈迷宮", "scale": 150, "waves": [["loop_shade", "pixel_bat"], ["loop_shade", "loop_shade", "noise_slime"]], "star_turns": 16, "env": {"name": "迷霧", "text": "所有人效果命中 −20", "mods": [{"stat": "hit", "add": -20}]}, "rewards": {"gold": 420, "notes": 28, "first_stardust": 100}},
+  {"id": "1-5", "name": "守衛程式", "scale": 165, "waves": [["pixel_bat", "noise_slime", "pixel_bat"], ["sentinel"]], "star_turns": 30, "rewards": {"gold": 500, "notes": 35, "first_stardust": 300}},
+  {"id": "1-6", "name": "防火牆", "scale": 180, "waves": [["firewall", "pixel_bat"], ["bug_knight", "firewall", "cache_wisp"]], "star_turns": 40, "env": {"name": "烈日", "text": "焰屬性攻擊 +10%、潮屬性攻擊 −10%", "mods": [{"element": "blaze", "stat": "atk", "pct": 10}, {"element": "tide", "stat": "atk", "pct": -10}]}, "rewards": {"gold": 540, "notes": 38, "first_stardust": 100}},
+  {"id": "1-7", "name": "快取之海", "scale": 200, "waves": [["cache_wisp", "noise_slime", "noise_slime"], ["cache_wisp", "loop_shade", "bug_knight"]], "star_turns": 32, "rewards": {"gold": 580, "notes": 42, "first_stardust": 100}},
+  {"id": "1-8", "name": "斷線的橋", "scale": 215, "waves": [["pixel_bat", "pixel_bat", "pixel_bat"], ["loop_shade", "bug_knight", "pixel_bat", "cache_wisp"]], "star_turns": 36, "env": {"name": "狂風", "text": "所有人速度 +15", "mods": [{"stat": "spd", "add": 15}]}, "rewards": {"gold": 620, "notes": 46, "first_stardust": 100}},
+  {"id": "1-9", "name": "守門者的前庭", "scale": 230, "waves": [["firewall", "loop_shade", "cache_wisp"], ["bug_knight", "bug_knight", "cache_wisp"]], "star_turns": 55, "rewards": {"gold": 660, "notes": 50, "first_stardust": 100}},
+  {"id": "1-10", "name": "裂界守門者", "scale": 180, "waves": [["loop_shade", "cache_wisp"], ["gatekeeper"]], "star_turns": 50, "env": {"name": "裂界", "text": "所有人暴擊 +10", "mods": [{"stat": "crit", "add": 10}]}, "rewards": {"gold": 800, "notes": 60, "first_stardust": 300}}
 ]

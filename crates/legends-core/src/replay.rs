@@ -9,6 +9,7 @@ use serde::Serialize;
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct Outcome {
     pub won: bool,
+    /// 我方出手幾次（三星評價看這個）
     pub rounds: u32,
     /// 還站著的我方人數（之後算星數用）
     pub survivors: usize,
@@ -33,7 +34,7 @@ pub enum ReplayError {
 pub fn outcome(b: &Battle) -> Outcome {
     Outcome {
         won: b.phase() == Phase::Won,
-        rounds: b.round(),
+        rounds: b.ally_turns(),
         survivors: b.allies().iter().filter(|a| a.alive()).count(),
         digest: b.digest(),
     }

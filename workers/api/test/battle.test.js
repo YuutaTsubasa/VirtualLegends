@@ -88,8 +88,8 @@ test('過期的票、別人的票、沒解鎖的關卡、不合法的隊伍', as
   assert.equal((await s.call('POST', '/v1/battle/finish', { ticket: t.ticket, commands }, acc)).status, 410);
 
   assert.deepEqual((await start(s, acc, '1-2')).body, { error: 'locked' });
-  assert.equal((await start(s, acc, '1-1', ['leo.uniform'])).status, 404);
-  assert.equal((await start(s, acc, '1-1', [...TEAM, 'aming.uniform'])).body.error, 'bad_team');
+  assert.equal((await start(s, acc, '1-1', ['leo.daily'])).status, 404);
+  assert.equal((await start(s, acc, '1-1', [...TEAM, 'aming.daily'])).body.error, 'bad_team');
   assert.equal((await start(s, acc, '1-1', [])).body.error, 'bad_team');
 });
 

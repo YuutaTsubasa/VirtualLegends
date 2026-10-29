@@ -215,6 +215,8 @@ Client 只負責呈現：本機跑同一份引擎做演出；本機只存設定�
 | Server（帳號、轉蛋、升級、突破、戰鬥票、重算） | 保留；加裝備、技能強化、掉落 |
 | Client 畫面 | 標題、大廳、招募、角色、出擊的流程保留，外觀改成 bluebolt-ui；戰鬥畫面重寫 |
 
+**進度（2026-10-30）**：§4 的戰鬥引擎已重寫（`crates/legends-core`：`scheduler`、`resolver`、`effects`、`triggers`、`resources`、`state`、`battle`），資料改成五屬性與冷卻制（`data/rules.json`、`gear_sets.json`，15 個角色、第一章 10 關＋8 種原創怪物），Server 與 Client 跟著改；`Member` 已經能帶技能等級與裝備，但 Server 的技能強化、裝備、掉落 API 還沒做。數值是初版（`balance_table`：起始隊伍 Lv1 可過 1-1～1-7，魔王約 Lv20）。
+
 ## 11. 第一個可玩里程碑（M1）
 
 目標：自己和少數朋友能從開帳號玩到第一章結束，抽卡、養成、戰鬥結算都經過 Server。網頁版＋Android APK。

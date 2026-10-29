@@ -1,7 +1,7 @@
 [package]
 name = "legends-core"
 version = "0.1.0"
-description = "虛擬新傳說的戰鬥引擎：牌氣回合制的規則、敵人行動、自動戰鬥與重算驗證"
+description = "虛擬新傳說的戰鬥引擎：行動條回合制的規則、敵人行動、自動戰鬥與重算驗證"
 edition = "2021"
 rust-version = "1.89"
 
