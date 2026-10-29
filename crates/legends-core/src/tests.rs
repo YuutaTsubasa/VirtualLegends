@@ -384,7 +384,11 @@ fn replay_cost() {
     for _ in 0..100 {
         simulate(&cat, &s, 1, &log).unwrap();
     }
-    println!("魔王戰 {} 個指令，重算一場 {:?}", log.len(), start.elapsed() / 100);
+    println!(
+        "魔王戰 {} 個指令，重算一場 {:?}",
+        log.len(),
+        start.elapsed() / 100
+    );
     let start = std::time::Instant::now();
     for _ in 0..100 {
         Catalog::builtin();
