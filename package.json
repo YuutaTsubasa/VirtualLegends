@@ -23,6 +23,7 @@
     "wasm-pack": "^0.13.1"
   },
   "dependencies": {
+    "bluebolt-ui": "github:YuutaTsubasa/bluebolt-ui#v0.3.1",
     "virtual-core": "github:YuutaTsubasa/VirtualCore#v0.7.0"
   }
 }

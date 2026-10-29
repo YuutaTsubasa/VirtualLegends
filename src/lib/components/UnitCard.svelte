@@ -1,136 +1,69 @@
 <script>
-  // 角色卡：半身像＋稀有度＋屬性＋名稱（招募結果、角色一覽、編隊用）
-  import { COSTUMES, ELEMENT_NAME, ROLE_NAME, characterOf } from '../data.js';
-  import { portrait } from '../characters.js';
+  // 角色卡：bluebolt-ui 的 UnitCard＋本作的半身像、屬性、稀有度框（招募結果、角色一覽、編隊用）
+  import { UnitCard as Card } from 'bluebolt-ui';
+  import { COSTUMES, ELEMENT_NAME, characterOf } from '../data.js';
+  import { portrait as portraitUrl } from '../characters.js';
   import { t } from '../i18n.svelte.js';
 
-  let { costume, level = null, selected = false, dim = false, badge = '', onclick = undefined } = $props();
+  let { costume, level = 1, selected = false, num = '', badge = '', onclick = undefined, width = 120 } = $props();
 
   const def = $derived(COSTUMES.get(costume));
   const ch = $derived(characterOf(costume));
 </script>
 
-<button
-  class="card rarity-{def.rarity} el-{def.element}"
-  class:selected
-  class:dim
-  type="button"
-  onclick={onclick}
-  disabled={!onclick}
-  style:--char={ch.color}
->
-  <img src={portrait(ch.id)} alt="" draggable="false" />
-  <span class="stars">{'★'.repeat(def.rarity)}</span>
-  <span class="el">{t(ELEMENT_NAME[def.element])}</span>
-  {#if badge}<span class="badge">{badge}</span>{/if}
-  <span class="name">
-    <b>{t(ch.name)}</b>
-    <small>{t(def.name)}</small>
-  </span>
-  <span class="role">{t(ROLE_NAME[def.role])}{#if level !== null}・Lv {level}{/if}</span>
-</button>
+<div class="unit rarity-{def.rarity} el-{def.element}" style:width="{width}px" style:--char={ch.color} class:static={!onclick}>
+  <Card name={t(ch.name)} sub={t(def.name)} {level} stars={def.rarity} {num} {badge} {selected} role={t(ELEMENT_NAME[def.element])} onclick={onclick ?? (() => {})}>
+    {#snippet portrait()}
+      <img src={portraitUrl(ch.id)} alt="" draggable="false" />
+    {/snippet}
+  </Card>
+</div>
 
 <style>
-  .card {
+  .unit {
     position: relative;
-    width: 15cqh;
-    height: 21cqh;
-    padding: 0;
-    border: 0.4cqh solid var(--rarity);
-    border-radius: 1cqh;
-    overflow: hidden;
-    background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--char) 55%, white) 0%, var(--char) 45%, #1a1a1a 120%);
-    box-shadow: 0 0.6cqh 0 rgba(0, 0, 0, 0.4);
-    color: var(--ivory);
-    text-align: left;
-    opacity: 1;
+    flex: none;
   }
 
-  .card:disabled {
-    cursor: default;
-    opacity: 1;
+  .unit :global(.bb-unit) {
+    background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--char) 55%, white) 0%, var(--char) 50%, #141826 120%);
   }
 
-  .card.selected {
-    outline: 0.5cqh solid var(--gold);
-    transform: translateY(-0.8cqh);
+  .unit :global(.art img) {
+    object-position: 50% 10%;
   }
 
-  .card.dim {
-    filter: grayscale(0.8) brightness(0.6);
-  }
-
-  img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: 50% 12%;
-  }
-
-  .stars {
-    position: absolute;
-    top: 0.6cqh;
-    left: 0.8cqh;
-    color: var(--rarity);
-    font-size: 0.75em;
-    text-shadow: 0 0 0.6cqh #000, 0 0 0.3cqh #000;
-  }
-
-  .el {
-    position: absolute;
-    top: 0.5cqh;
-    right: 0.6cqh;
-    width: 3.4cqh;
-    height: 3.4cqh;
+  /* 左上角的屬性字放在屬性色的菱形裡 */
+  .unit :global(.role) {
+    top: 6px;
+    left: 6px;
+    width: 26px;
+    height: 26px;
     display: grid;
     place-items: center;
-    background: var(--ivory);
-    color: var(--el);
-    border-radius: 0.6cqh;
-    font-weight: 800;
-    font-size: 0.8em;
+    font: 900 13px var(--bb-font-zh);
+    background: var(--el);
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+    text-shadow: none;
   }
 
-  .badge {
+  /* 稀有度：底部細條 */
+  .unit::after {
+    content: '';
     position: absolute;
-    top: 5cqh;
-    right: 0.4cqh;
-    background: var(--accent);
-    padding: 0.2cqh 0.8cqh;
-    border-radius: 0.6cqh;
-    font-size: 0.65em;
-    font-weight: 700;
-  }
-
-  .name {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 2.6cqh;
-    padding: 0.4cqh 0.8cqh;
-    background: linear-gradient(0deg, rgba(0, 0, 0, 0.85), transparent);
-    display: flex;
-    flex-direction: column;
-    line-height: 1.15;
-  }
-
-  .name small {
-    font-size: 0.7em;
-    color: var(--gold);
-  }
-
-  .role {
-    position: absolute;
-    left: 0;
+    left: 12px;
     right: 0;
     bottom: 0;
-    height: 2.6cqh;
-    padding: 0 0.8cqh;
-    background: rgba(0, 0, 0, 0.85);
-    font-size: 0.65em;
-    display: flex;
-    align-items: center;
+    height: 3px;
+    background: var(--rarity);
+    pointer-events: none;
+  }
+
+  .unit :global(.stars) {
+    color: var(--rarity);
+  }
+
+  .static :global(.bb-unit) {
+    cursor: default;
   }
 </style>

@@ -1,4 +1,5 @@
 <script>
+  import { Button, DisplayWord, KineticText } from 'bluebolt-ui';
   import { session, signUp, claim } from '../api.svelte.js';
   import { t } from '../i18n.svelte.js';
   import { portrait } from '../characters.js';
@@ -26,7 +27,7 @@
     }
   }
 
-  const LINEUP = ['yuehua', 'xiaocui', 'aming', 'tangtang', 'lanjie'];
+  const LINEUP = ['yuehua', 'xiaocui', 'aming'];
 </script>
 
 <section class="title">
@@ -35,23 +36,27 @@
       <img src={portrait(id, i === 1 ? 'happy' : 'normal')} alt="" style:--i={i} draggable="false" />
     {/each}
   </div>
+
   <div class="logo">
-    <h1>{t('虛擬新傳說')}</h1>
-    <p>VIRTUAL LEGENDS</p>
+    <DisplayWord top="VIRTUAL" bottom="LEGENDS" size="132px" />
+    <h1><KineticText text={t('虛擬新傳說')} delay={300} /></h1>
+    <p class="tag">{t('Virtual 系列・回合制 RPG')}</p>
   </div>
+
   <div class="menu">
-    <button class="btn" type="button" onclick={start} disabled={session.busy}>
+    <Button size="lg" en={session.account ? 'Continue' : 'Start'} onclick={start} disabled={session.busy}>
       {session.account ? t('繼續遊戲') : t('開始遊戲')}
-    </button>
+    </Button>
     {#if claiming}
       <form onsubmit={submitCode}>
         <input bind:value={code} placeholder={t('12 位繼承碼')} maxlength="16" autocomplete="off" />
-        <button class="btn sub" type="submit" disabled={session.busy || code.length < 12}>{t('取回帳號')}</button>
+        <Button type="submit" variant="ink" disabled={session.busy || code.length < 12}>{t('取回帳號')}</Button>
       </form>
     {:else}
-      <button class="btn ghost" type="button" onclick={() => (claiming = true)}>{t('用繼承碼取回帳號')}</button>
+      <Button variant="ghost" shape="rect" size="sm" onclick={() => (claiming = true)}>{t('用繼承碼取回帳號')}</Button>
     {/if}
   </div>
+
   <small class="note">{t('第一版不收真錢；招募只用遊戲內的星屑，機率在招募畫面公開。')}</small>
 </section>
 
@@ -63,84 +68,95 @@
 
   .lineup {
     position: absolute;
-    inset: 0;
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
+    right: -40px;
+    bottom: 0;
+    width: 760px;
+    height: 640px;
   }
 
   .lineup img {
-    height: 78cqh;
-    margin: 0 -7cqh;
-    filter: drop-shadow(0 0 2cqh rgba(0, 0, 0, 0.6));
-    opacity: 0.9;
-    transform: translateY(calc((2 - var(--i)) * (2 - var(--i)) * 1.5cqh));
+    position: absolute;
+    bottom: 0;
+    height: 430px;
+    left: calc(var(--i) * 250px - 20px);
+    filter: drop-shadow(0 10px 20px rgb(11 15 26 / 0.35));
+    animation: rise var(--bb-dur-5) var(--bb-ease) both;
+    animation-delay: calc(var(--i) * 90ms);
+  }
+
+  /* 中間那位站在最前面 */
+  .lineup img:nth-child(2) {
+    z-index: 2;
+    height: 540px;
+    left: 150px;
+  }
+
+  @keyframes rise {
+    from {
+      transform: translateY(calc(60px * var(--bb-motion)));
+      opacity: 0;
+    }
   }
 
   .logo {
     position: absolute;
-    top: 7cqh;
-    left: 0;
-    right: 0;
-    text-align: center;
+    left: 60px;
+    top: 70px;
+    z-index: 3;
   }
 
   h1 {
-    margin: 0;
-    font-size: 4.2em;
-    letter-spacing: 0.25em;
-    color: var(--ivory);
-    -webkit-text-stroke: 0.5cqh var(--ink);
-    paint-order: stroke fill;
-    text-shadow: 0 1cqh 0 var(--accent-deep), 0 0 4cqh rgba(227, 181, 82, 0.7);
+    margin: 8px 0 0;
+    font-size: 54px;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    color: var(--bb-blue);
+    -webkit-text-stroke: 1px var(--bb-ink);
   }
 
-  .logo p {
-    margin: 0.6cqh 0 0;
-    letter-spacing: 0.8em;
-    color: var(--gold);
-    font-weight: 700;
+  .tag {
+    display: inline-block;
+    margin: 8px 0 0;
+    padding: 4px 14px;
+    background: var(--bb-yellow);
+    color: var(--bb-on-yellow);
+    font-weight: 800;
+    transform: skewX(var(--bb-skew));
   }
 
   .menu {
     position: absolute;
-    bottom: 12cqh;
-    left: 0;
-    right: 0;
+    left: 60px;
+    top: 470px;
+    z-index: 3;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 2cqh;
-  }
-
-  .menu .btn {
-    min-width: 40cqh;
+    align-items: flex-start;
+    gap: 14px;
   }
 
   form {
     display: flex;
-    gap: 1cqh;
+    gap: 8px;
   }
 
   input {
-    font: inherit;
-    width: 30cqh;
-    padding: 1cqh 1.6cqh;
-    border-radius: 1cqh;
-    border: var(--line) solid var(--gold);
-    background: var(--ivory);
-    color: var(--ink);
+    font: 700 18px var(--bb-font-mono);
+    letter-spacing: 0.15em;
+    padding: 8px 12px;
+    width: 230px;
+    border: 2px solid var(--bb-ink);
+    background: var(--bb-surface);
+    color: var(--bb-ink);
     text-transform: uppercase;
-    letter-spacing: 0.2em;
   }
 
   .note {
     position: absolute;
-    bottom: 3cqh;
-    left: 0;
-    right: 0;
-    text-align: center;
-    font-size: 0.7em;
-    opacity: 0.8;
+    left: 60px;
+    bottom: 34px;
+    z-index: 3;
+    font-size: 12px;
+    color: var(--bb-ink-2);
   }
 </style>

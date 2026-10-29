@@ -1,28 +1,23 @@
-/* 虛擬新傳說：暫時的配色（墨綠＋象牙白＋金色描邊＋朱紅主行動），之後換成 bluebolt-ui。
-   尺寸一律用 cqh／cqw（16:9 舞台的高／寬百分比），任何視窗大小比例都一樣。 */
+/* 虛擬新傳說的外觀：bluebolt-ui（藍・白・黃・黑 HUD）。這裡只放本作自己的 token 與舞台。
+   舞台固定 1280×720 邏輯像素，整個依視窗等比縮放（App.svelte 算 --stage-scale），
+   所以 bluebolt-ui 的 px 尺寸與本作的排版在任何視窗、手機上比例都一樣。 */
 
 :root {
-  --felt: #0f3b2e;
-  --felt-deep: #082219;
-  --felt-soft: #1d5a45;
-  --ivory: #f6f0e1;
-  --ivory-deep: #e2d7bd;
-  --gold: #e3b552;
-  --gold-deep: #a9802c;
-  --ink: #1d1a16;
-  --accent: #d2402f;
-  --accent-deep: #9e2a1d;
-  --blaze: #e0502f;
-  --tide: #2f7fd6;
-  --gale: #2fae6a;
-  --dawn: #e8b830;
-  --dusk: #8a4fd6;
-  --hp: #4ccf7a;
-  --shield: #8fd3ff;
-  --scrim: rgba(4, 16, 12, 0.72);
-  --font: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', 'Heiti TC', sans-serif;
-  --line: 0.3cqh;
-  color-scheme: dark;
+  /* 屬性 */
+  --blaze: #ff5a36;
+  --tide: #2f8bff;
+  --gale: #22c07a;
+  --dawn: #ffc21f;
+  --dusk: #9b5cff;
+  /* 戰鬥用 */
+  --hp: #2fd47a;
+  --hp-foe: #ff4d5e;
+  --shield: #9fd8ff;
+  --gauge: var(--bb-yellow);
+  /* 稀有度 */
+  --r3: #a9b6cc;
+  --r4: #b48cff;
+  --r5: #ffd21f;
 }
 
 * {
@@ -33,30 +28,31 @@ html,
 body {
   margin: 0;
   height: 100%;
-  background: #030b08;
-  color: var(--ivory);
-  font-family: var(--font);
   overflow: hidden;
+  background: var(--bb-paper);
+  color: var(--bb-ink);
+  font-family: var(--bb-font-zh);
   -webkit-user-select: none;
   user-select: none;
 }
 
 #app {
-  height: 100%;
-  display: grid;
-  place-items: center;
+  position: fixed;
+  inset: 0;
 }
 
-/* 16:9 舞台 */
+/* 1280×720 的舞台 */
+/* 版面框不縮放，所以用 left/top 50% 再平移置中，縮放後才不會偏一邊 */
 .stage {
-  position: relative;
-  width: min(100vw, calc(100vh * 16 / 9));
-  height: min(100vh, calc(100vw * 9 / 16));
-  container-type: size;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 1280px;
+  height: 720px;
+  transform: translate(-50%, -50%) scale(var(--stage-scale, 1));
   overflow: hidden;
-  background:
-    radial-gradient(ellipse at 50% 35%, var(--felt-soft) 0%, var(--felt) 55%, var(--felt-deep) 100%);
-  font-size: 2.6cqh;
+  container-type: size;
+  font-size: 16px;
 }
 
 button {
@@ -67,51 +63,20 @@ button {
 
 button:disabled {
   cursor: default;
-  opacity: 0.45;
 }
 
-/* 主要按鈕：朱紅、金邊 */
-.btn {
-  border: var(--line) solid var(--gold);
-  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
-  color: var(--ivory);
-  padding: 1.2cqh 3cqh;
-  border-radius: 1cqh;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  box-shadow: 0 0.6cqh 0 rgba(0, 0, 0, 0.35);
-}
-
-.btn:not(:disabled):hover {
-  filter: brightness(1.12);
-}
-
-.btn.sub {
-  background: linear-gradient(180deg, var(--felt-soft) 0%, var(--felt) 100%);
-}
-
-.btn.ghost {
-  background: rgba(0, 0, 0, 0.25);
-  border-color: rgba(227, 181, 82, 0.6);
-}
-
-/* 象牙白面板 */
-.panel {
-  background: var(--ivory);
-  color: var(--ink);
-  border: var(--line) solid var(--gold-deep);
-  border-radius: 1.2cqh;
-  box-shadow: 0 0.8cqh 0 rgba(0, 0, 0, 0.35);
+img {
+  -webkit-user-drag: none;
 }
 
 .rarity-3 {
-  --rarity: #9fb3c8;
+  --rarity: var(--r3);
 }
 .rarity-4 {
-  --rarity: #b98cff;
+  --rarity: var(--r4);
 }
 .rarity-5 {
-  --rarity: #ffcf4a;
+  --rarity: var(--r5);
 }
 
 .el-blaze {
@@ -130,14 +95,25 @@ button:disabled {
   --el: var(--dusk);
 }
 
-.error-toast {
+/* 屬性菱形（文字放在裡面） */
+.el-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  background: var(--el);
+  color: #fff;
+  font-weight: 900;
+  font-size: 13px;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+
+/* 畫面主區塊：標題列下面 */
+.screen-body {
   position: absolute;
-  left: 50%;
-  bottom: 4cqh;
-  transform: translateX(-50%);
-  background: var(--accent-deep);
-  border: var(--line) solid var(--gold);
-  padding: 1cqh 3cqh;
-  border-radius: 1cqh;
-  z-index: 50;
+  top: 112px;
+  left: 40px;
+  right: 40px;
+  bottom: 36px;
 }
