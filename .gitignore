@@ -10,3 +10,6 @@ target/
 
 # 本機設定
 .env*.local
+
+# wasm-pack 產生的引擎（npm run build:wasm），Client 與 Server 共用
+pkg/

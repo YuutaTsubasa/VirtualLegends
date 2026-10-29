@@ -23,3 +23,18 @@ jobs:
         run: cargo test --manifest-path crates/legends-core/Cargo.toml --release
       - name: wasm
         run: cargo build --manifest-path crates/legends-core/Cargo.toml --release --target wasm32-unknown-unknown
+
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: test（wasm 引擎＋node:sqlite 模擬 D1）
+        run: npm run test:server

@@ -1,0 +1,15 @@
+{
+  "name": "virtual-legends-api",
+  "private": true,
+  "type": "module",
+  "description": "虛擬新傳說的 Server（Cloudflare Workers＋D1）：帳號、轉蛋、庫存、養成、戰鬥票與重算驗證",
+  "scripts": {
+    "dev": "wrangler dev --port 8790",
+    "migrate:local": "wrangler d1 migrations apply virtual-legends --local",
+    "migrate:remote": "wrangler d1 migrations apply virtual-legends --remote",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.20.0"
+  }
+}

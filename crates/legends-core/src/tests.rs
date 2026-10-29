@@ -50,7 +50,7 @@ fn auto(cat: &Catalog, s: &BattleSetup, seed: u64) -> Battle {
 #[test]
 fn builtin_data_loads() {
     let cat = Catalog::builtin();
-    assert_eq!(cat.costumes.len(), 10);
+    assert_eq!(cat.costumes.len(), 15);
     assert!(cat.stages.contains_key("1-1"));
 }
 

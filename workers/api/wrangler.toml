@@ -1,0 +1,15 @@
+# 虛擬新傳說的 Server（Cloudflare Workers＋D1）。部署前要先建 D1 資料庫並填 database_id：
+#   npm run build:wasm（在 repo 根目錄）
+#   cd workers/api && npm install && npx wrangler login
+#   npx wrangler d1 create virtual-legends     # 把印出來的 database_id 填到下面
+#   npm run migrate:remote && npm run deploy
+# 本機：npm run migrate:local && npm run dev（用 wrangler 內建的本機 D1，不碰線上）
+name = "virtual-legends-api"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "virtual-legends"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"

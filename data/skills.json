@@ -51,6 +51,31 @@
   { "id": "alie.uniform.ult", "name": "爆裂重拳", "kind": "ultimate", "target": "all_enemies",
     "effects": [{ "type": "damage", "power": 165 }] },
 
+  { "id": "aming.rider.skill", "name": "油門全開", "kind": "skill", "cost": 2, "target": "enemy",
+    "effects": [{ "type": "damage", "power": 210 }, { "type": "buff", "stat": "spd", "pct": 20, "turns": 2 }] },
+  { "id": "aming.rider.ult", "name": "爆燃甩尾", "kind": "ultimate", "target": "all_enemies",
+    "effects": [{ "type": "damage", "power": 190 }] },
+
+  { "id": "tangtang.idol.skill", "name": "應援歌", "kind": "skill", "cost": 1, "target": "all_allies",
+    "effects": [{ "type": "heal", "power": 90 }, { "type": "buff", "stat": "atk", "pct": 15, "turns": 2 }] },
+  { "id": "tangtang.idol.ult", "name": "安可甜心", "kind": "ultimate", "target": "all_allies",
+    "effects": [{ "type": "heal", "power": 240 }, { "type": "draw", "count": 2 }] },
+
+  { "id": "lanjie.qipao.skill", "name": "掌櫃的規矩", "kind": "skill", "cost": 1, "target": "all_allies",
+    "effects": [{ "type": "shield", "power": 90 }, { "type": "buff", "stat": "def", "pct": 20, "turns": 2 }] },
+  { "id": "lanjie.qipao.ult", "name": "清台", "kind": "ultimate", "target": "all_enemies",
+    "effects": [{ "type": "damage", "power": 150 }, { "type": "steal", "count": 1 }] },
+
+  { "id": "xiaocui.festival.skill", "name": "煙火踢", "kind": "skill", "cost": 2, "target": "all_enemies",
+    "effects": [{ "type": "damage", "power": 95 }, { "type": "draw", "count": 1 }] },
+  { "id": "xiaocui.festival.ult", "name": "百花煙火", "kind": "ultimate", "target": "all_enemies",
+    "effects": [{ "type": "damage", "power": 230 }, { "type": "buff", "stat": "def", "pct": -20, "turns": 2 }] },
+
+  { "id": "yuehua.moonlit.skill", "name": "月蝕", "kind": "skill", "cost": 1, "target": "enemy",
+    "effects": [{ "type": "damage", "power": 130 }, { "type": "steal", "count": 2 }] },
+  { "id": "yuehua.moonlit.ult", "name": "滿月審判", "kind": "ultimate", "target": "all_enemies",
+    "effects": [{ "type": "damage", "power": 200 }, { "type": "steal", "count": 3 }, { "type": "buff", "stat": "spd", "pct": -30, "turns": 2 }] },
+
   { "id": "enemy.strike", "name": "撞擊", "kind": "basic", "target": "enemy", "effects": [{ "type": "damage", "power": 100 }] },
   { "id": "enemy.burst", "name": "自摸衝擊", "kind": "ultimate", "target": "all_enemies",
     "effects": [{ "type": "damage", "power": 110 }] },
