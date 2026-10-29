@@ -18,7 +18,7 @@ test('升級扣金幣與筆記、加羈絆，不能超過等級上限', async ()
   assert.deepEqual([over.status, over.body.error], [400, 'level_cap']);
 });
 
-test('錢不夠不能升級、沒有的衣裝不能升', async () => {
+test('錢不夠不能升級、沒有的角色不能升', async () => {
   const s = server();
   const acc = await s.newAccount();
   assert.equal((await s.call('POST', '/v1/costumes/level', { costume: 'aming.uniform', levels: 19 }, acc)).body.error, 'not_enough');

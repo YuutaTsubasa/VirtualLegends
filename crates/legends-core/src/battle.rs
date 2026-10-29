@@ -9,7 +9,7 @@
 //! 指令送出時就檢查；若輪到他之前，比他快的敵人偷走了要花的牌，這次行動退回普攻（`Event::Fizzle`）。
 //!
 //! - 普攻：不花牌，打完多拿 1 張自己屬性的牌。
-//! - 技能：花 cost 張自己屬性的牌（字牌可以代替任何花色；字屬性的衣裝可以花任何牌）。
+//! - 技能：花 cost 張自己屬性的牌（字牌可以代替任何花色；字屬性的角色可以花任何牌）。
 //! - 大招：花 3 張組成順子或刻子的牌，威力見 `Meld::power`。
 //! - 合技：同一回合我方花掉的牌湊得出一順＋一刻，回合結束時全隊對所有敵人追加攻擊。
 
@@ -58,7 +58,7 @@ pub struct Buff {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Fighter {
-    /// 衣裝 id 或敵人 id
+    /// 角色 id 或敵人 id
     pub id: String,
     pub suit: Suit,
     pub role: Option<Role>,

@@ -27,7 +27,7 @@ CREATE TABLE costumes (
   PRIMARY KEY (user_id, costume_id)
 );
 
--- 角色的羈絆（同一位角色的所有衣裝共用）
+-- 角色的羈絆（同一位角色的所有版本共用）
 CREATE TABLE bonds (
   user_id TEXT NOT NULL,
   character_id TEXT NOT NULL,

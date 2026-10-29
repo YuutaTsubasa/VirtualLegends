@@ -1,0 +1,4 @@
+// 介面文字（英文）。原文是 key；{name} 之類的位置要保留。M1 先放標題，其餘對外公開前補。
+export default {
+  虛擬新傳說: 'Virtual Legends',
+};

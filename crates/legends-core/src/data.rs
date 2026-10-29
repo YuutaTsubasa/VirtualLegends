@@ -1,4 +1,4 @@
-//! 遊戲資料：衣裝、技能、敵人、關卡。正本是 repo 的 `data/*.json`，Client 與 Server 編進同一份。
+//! 遊戲資料：角色、技能、敵人、關卡。正本是 repo 的 `data/*.json`，Client 與 Server 編進同一份。
 //! 技能的目標是「相對施放者」的：Enemy 是對手那一邊，Ally 是自己那一邊。
 
 use crate::tiles::Suit;

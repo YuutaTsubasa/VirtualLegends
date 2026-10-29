@@ -1,4 +1,4 @@
-//! 隊伍成員（Server 庫存裡的一套衣裝）換算成戰鬥能力值。
+//! 隊伍成員（Server 庫存裡的一個角色）換算成戰鬥能力值。
 //! 能力值 =（基礎 + 成長 ×（等級 − 1））×（100 + 突破 × 5 + 羈絆）%
 
 use crate::data::{Catalog, CostumeDef, Stats};
@@ -19,7 +19,7 @@ pub struct Member {
     pub level: u32,
     #[serde(default)]
     pub ascension: u8,
-    /// 角色的羈絆等級（同一位角色的所有衣裝共用）
+    /// 角色的羈絆等級（同一位角色的所有版本共用）
     #[serde(default)]
     pub bond: u8,
 }
@@ -29,7 +29,7 @@ pub enum SetupError {
     EmptyTeam,
     TeamTooLarge,
     UnknownCostume(String),
-    /// 同一位角色只能上一套衣裝
+    /// 同一位角色只能上一個版本
     DuplicateCharacter(String),
     BadLevel(String),
     UnknownStage(String),
