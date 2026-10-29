@@ -2,7 +2,22 @@
 
 [虛擬台麻館](https://github.com/YuutaTsubasa/TaiwanMahjong)系列（Virtual 系列）的第六款：原創的回合制轉蛋 RPG。轉蛋抽到的是系列角色的各種衣裝，用以麻將牌為資源的「牌氣」戰鬥系統闖關。
 
-**目前只有企劃，還沒有遊戲程式。** 企劃見 [`docs/plan.md`](docs/plan.md)。
+**開發中（M1）。** 企劃見 [`docs/plan.md`](docs/plan.md)。
+
+## 內容
+
+| 路徑 | 是什麼 |
+| --- | --- |
+| `crates/legends-core/` | Rust 戰鬥引擎：牌氣回合制、敵人行動、自動戰鬥、Server 用的重算驗證。確定性：同樣的隊伍、關卡、種子、指令，一定得到同樣的結果 |
+| `data/` | 衣裝、技能、敵人、關卡的資料（JSON）。Client 與 Server 編進同一份 |
+
+## 測試
+
+```bash
+cargo test --release --manifest-path crates/legends-core/Cargo.toml
+# 平衡表（各等級打各關的勝率與回合數）、重算一場的時間
+cargo test --release --manifest-path crates/legends-core/Cargo.toml -- --ignored --nocapture
+```
 
 - 第一版不收真錢，只用遊戲內貨幣轉蛋，遊戲內公開每張卡的機率。
 - 純 PvE 起步，之後加非同步 PvP（打別人存的防守隊伍）。

@@ -1,0 +1,5 @@
+[
+  { "id": "1-1", "name": "雀館的怪聲", "waves": [["dice", "chip"], ["ghost", "dice", "chip"]] },
+  { "id": "1-2", "name": "後巷的籌碼", "scale": 125, "waves": [["chip", "chip", "dice"], ["ghost", "ghost", "chip"]] },
+  { "id": "1-10", "name": "千面莊家", "scale": 190, "waves": [["ghost", "dice"], ["chip", "dealer", "chip"]] }
+]
