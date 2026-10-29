@@ -9,7 +9,7 @@ export const STAGES = stageList;
 export const STAGE_INDEX = new Map(stageList.map((s, i) => [s.id, i]));
 export const BANNERS = new Map(bannerList.map((b) => [b.id, b]));
 
-/** 新帳號送的衣裝與貨幣（四套 ★3 剛好一隊、十連抽一次） */
+/** 新帳號送的角色與貨幣（四個 ★3 剛好一隊、十連抽一次） */
 export const STARTER = {
   costumes: ['xiaocui.uniform', 'aming.uniform', 'tangtang.uniform', 'lanjie.uniform'],
   stardust: 1000,

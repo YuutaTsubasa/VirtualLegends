@@ -4,7 +4,7 @@ import { server } from './helpers.js';
 import { dayOf } from '../src/app.js';
 import { STARTER, DAILY } from '../src/data.js';
 
-test('新帳號拿到起始衣裝與貨幣', async () => {
+test('新帳號拿到起始角色與貨幣', async () => {
   const s = server();
   const acc = await s.newAccount();
   assert.match(acc.id, /^[0-9a-f]{32}$/);

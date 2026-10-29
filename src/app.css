@@ -1,0 +1,139 @@
+/* 虛擬新傳說：深夜雀館。墨綠牌桌絨布＋象牙白牌面＋金色描邊＋朱紅主行動。
+   尺寸一律用 cqh／cqw（16:9 舞台的高／寬百分比），任何視窗大小比例都一樣。 */
+
+:root {
+  --felt: #0f3b2e;
+  --felt-deep: #082219;
+  --felt-soft: #1d5a45;
+  --ivory: #f6f0e1;
+  --ivory-deep: #e2d7bd;
+  --gold: #e3b552;
+  --gold-deep: #a9802c;
+  --ink: #1d1a16;
+  --accent: #d2402f;
+  --accent-deep: #9e2a1d;
+  --man: #c7362a;
+  --pin: #2a5fb0;
+  --sou: #1f8a4c;
+  --honor: #2b2622;
+  --hp: #4ccf7a;
+  --shield: #8fd3ff;
+  --scrim: rgba(4, 16, 12, 0.72);
+  --font: 'Noto Sans TC', 'Microsoft JhengHei', 'PingFang TC', 'Heiti TC', sans-serif;
+  --line: 0.3cqh;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: #030b08;
+  color: var(--ivory);
+  font-family: var(--font);
+  overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#app {
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+/* 16:9 舞台 */
+.stage {
+  position: relative;
+  width: min(100vw, calc(100vh * 16 / 9));
+  height: min(100vh, calc(100vw * 9 / 16));
+  container-type: size;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 35%, var(--felt-soft) 0%, var(--felt) 55%, var(--felt-deep) 100%);
+  font-size: 2.6cqh;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* 主要按鈕：朱紅、金邊 */
+.btn {
+  border: var(--line) solid var(--gold);
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 100%);
+  color: var(--ivory);
+  padding: 1.2cqh 3cqh;
+  border-radius: 1cqh;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  box-shadow: 0 0.6cqh 0 rgba(0, 0, 0, 0.35);
+}
+
+.btn:not(:disabled):hover {
+  filter: brightness(1.12);
+}
+
+.btn.sub {
+  background: linear-gradient(180deg, var(--felt-soft) 0%, var(--felt) 100%);
+}
+
+.btn.ghost {
+  background: rgba(0, 0, 0, 0.25);
+  border-color: rgba(227, 181, 82, 0.6);
+}
+
+/* 象牙白面板 */
+.panel {
+  background: var(--ivory);
+  color: var(--ink);
+  border: var(--line) solid var(--gold-deep);
+  border-radius: 1.2cqh;
+  box-shadow: 0 0.8cqh 0 rgba(0, 0, 0, 0.35);
+}
+
+.rarity-3 {
+  --rarity: #9fb3c8;
+}
+.rarity-4 {
+  --rarity: #b98cff;
+}
+.rarity-5 {
+  --rarity: #ffcf4a;
+}
+
+.suit-man {
+  --suit: var(--man);
+}
+.suit-pin {
+  --suit: var(--pin);
+}
+.suit-sou {
+  --suit: var(--sou);
+}
+.suit-honor {
+  --suit: var(--honor);
+}
+
+.error-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 4cqh;
+  transform: translateX(-50%);
+  background: var(--accent-deep);
+  border: var(--line) solid var(--gold);
+  padding: 1cqh 3cqh;
+  border-radius: 1cqh;
+  z-index: 50;
+}

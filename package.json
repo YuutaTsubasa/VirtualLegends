@@ -6,11 +6,23 @@
   "description": "虛擬新傳說：Virtual 系列的原創回合制轉蛋 RPG",
   "scripts": {
     "build:wasm": "wasm-pack build crates/legends-wasm --target web --release --out-dir ../../pkg/engine --no-pack",
+    "predev": "npm run build:wasm",
+    "prebuild": "npm run build:wasm",
+    "dev": "vite",
+    "dev:server": "npm --prefix workers/api run migrate:local && npm --prefix workers/api run dev",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "npm run test:engine && npm run test:server",
     "test:engine": "cargo test --release --manifest-path crates/legends-core/Cargo.toml",
     "test:server": "npm run build:wasm && node --test \"workers/api/test/*.test.js\""
   },
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.1.1",
+    "svelte": "^5.57.3",
+    "vite": "^6.4.5",
     "wasm-pack": "^0.13.1"
+  },
+  "dependencies": {
+    "virtual-core": "github:YuutaTsubasa/VirtualCore#v0.7.0"
   }
 }

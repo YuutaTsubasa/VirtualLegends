@@ -38,3 +38,18 @@ jobs:
       - run: npm ci
       - name: test（wasm 引擎＋node:sqlite 模擬 D1）
         run: npm run test:server
+
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: build（會先 build:wasm）
+        run: npm run build
