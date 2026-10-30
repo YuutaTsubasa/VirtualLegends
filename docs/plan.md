@@ -178,6 +178,8 @@ Deterministic Simulation Core
 - **介面風格**：用 **bluebolt-ui**（藍・白・黃・黑 HUD）：大廳用巨大階梯選單、角色列表用選擇卡、能力值用巨大外框數字；遊戲畫面另外依本作需要加元件，通用的元件回饋到 bluebolt-ui（另開 PR、打新 tag）。
 - 自動戰鬥、2 倍速、撤退。手把操作（VirtualCore `input/controls.js`）。
 
+**美術流程**（2026-10-30）：用 Codex CLI 的圖片生成（`codex exec`，附上系列半身像當角色參考）畫進 `art-inbox/`（不進 git），挑過後用 `python scripts/import-art.py` 轉成 webp 放進 `src/assets/art/`；`src/lib/art.js` 自動找圖，沒有就退回系列半身像。目前有：各版本半身像（四表情）、戰鬥全身圖（待機＋攻擊兩張，動作用 CSS 做呼吸、衝刺、受擊）、8 種怪物、3 張戰鬥背景、標題與大廳背景、App 圖示。大招動畫之後可能由使用者另外生成。
+
 ## 8. Client–Server 分工
 
 沿用已完成的 Server（`workers/api`），只加裝備與技能強化：

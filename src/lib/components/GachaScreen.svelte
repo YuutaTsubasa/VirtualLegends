@@ -4,7 +4,7 @@
   import { session, gacha } from '../api.svelte.js';
   import { t } from '../i18n.svelte.js';
   import { COSTUMES, unitName } from '../data.js';
-  import { portrait } from '../characters.js';
+  import { costumeArt, sceneArt } from '../art.js';
   import TopBar from './TopBar.svelte';
   import UnitCard from './UnitCard.svelte';
 
@@ -42,12 +42,15 @@
   const pct = (rate) => `${+(rate / 100).toFixed(3)}%`;
 </script>
 
+<img class="backdrop" src={sceneArt('title_bg')} alt="" draggable="false" />
+<span class="veil" aria-hidden="true"></span>
+
 <TopBar title={t('招募')} en="Recruit" num="02" {onback} />
 
 {#if banner}
   <div class="art" aria-hidden="true">
     {#each featured as c, i (c.costume)}
-      <img src={portrait(COSTUMES.get(c.costume).character, 'win')} alt="" style:--i={i} draggable="false" />
+      <img src={costumeArt(c.costume, 'win')} alt="" style:--i={i} draggable="false" />
     {/each}
     <span class="pickup">PICK UP ★5</span>
   </div>
@@ -114,6 +117,20 @@
 </Modal>
 
 <style>
+  .backdrop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .veil {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgb(243 246 253 / 0.9) 0 30%, rgb(243 246 253 / 0.1) 60%);
+  }
+
   .art {
     position: absolute;
     right: 0;

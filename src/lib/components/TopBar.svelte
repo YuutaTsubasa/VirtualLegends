@@ -43,10 +43,11 @@
   .ttl {
     display: flex;
     align-items: flex-end;
-    gap: 10px;
+    gap: 18px;
   }
 
   .num {
+    padding-right: 6px;
     font: italic 400 72px/0.8 var(--bb-font-display);
     color: transparent;
     -webkit-text-stroke: 2px var(--bb-ink);
@@ -67,6 +68,7 @@
     text-transform: uppercase;
     padding: 2px 10px;
     transform: skewX(var(--bb-skew));
+    margin-left: 4px;
   }
 
   h2 {

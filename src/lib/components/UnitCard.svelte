@@ -2,7 +2,7 @@
   // 角色卡：bluebolt-ui 的 UnitCard＋本作的半身像、屬性、稀有度框（招募結果、角色一覽、編隊用）
   import { UnitCard as Card } from 'bluebolt-ui';
   import { COSTUMES, ELEMENT_NAME, characterOf } from '../data.js';
-  import { portrait as portraitUrl } from '../characters.js';
+  import { costumeArt } from '../art.js';
   import { t } from '../i18n.svelte.js';
 
   let { costume, level = 1, selected = false, num = '', badge = '', onclick = undefined, width = 120 } = $props();
@@ -14,7 +14,7 @@
 <div class="unit rarity-{def.rarity} el-{def.element}" style:width="{width}px" style:--char={ch.color} class:static={!onclick}>
   <Card name={t(ch.name)} sub={t(def.name)} {level} stars={def.rarity} {num} {badge} {selected} role={t(ELEMENT_NAME[def.element])} onclick={onclick ?? (() => {})}>
     {#snippet portrait()}
-      <img src={portraitUrl(ch.id)} alt="" draggable="false" />
+      <img src={costumeArt(costume)} alt="" draggable="false" />
     {/snippet}
   </Card>
 </div>
@@ -29,8 +29,15 @@
     background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--char) 55%, white) 0%, var(--char) 50%, #141826 120%);
   }
 
+  /* 半身像只佔上面 72%，名字放在下面的深色區，不會蓋到臉 */
   .unit :global(.art img) {
-    object-position: 50% 10%;
+    height: 72%;
+    object-position: 50% 0;
+  }
+
+  .unit :global(.info) {
+    padding-top: 8px;
+    background: linear-gradient(transparent, rgb(8 10 18 / 0.92) 22%);
   }
 
   /* 左上角的屬性字放在屬性色的菱形裡 */

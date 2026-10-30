@@ -13,6 +13,7 @@ export default defineConfig({
     port: 1425,
     strictPort: true,
     host: host || false,
-    watch: { ignored: ['**/src-tauri/**', '**/workers/**', '**/crates/**'] },
+    // art-inbox 是 Codex 正在寫的草稿，不要監看（會一直重載，檔案被鎖住時還會讓 Vite 當掉）
+    watch: { ignored: ['**/src-tauri/**', '**/workers/**', '**/crates/**', '**/art-inbox/**'] },
   },
 });
