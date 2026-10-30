@@ -13,3 +13,6 @@ target/
 
 # wasm-pack 產生的引擎（npm run build:wasm），Client 與 Server 共用
 pkg/
+
+# 美術草稿（Codex 產生的原始檔；挑過的才放進 public/）
+art-inbox/

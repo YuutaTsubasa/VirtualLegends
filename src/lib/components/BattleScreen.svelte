@@ -7,7 +7,7 @@
   import { session, finishBattle } from '../api.svelte.js';
   import { loadEngine, BattleSession } from '../engine.js';
   import { COSTUMES, SKILLS, ENEMIES, STAGES, ELEMENT_NAME, STATUS_NAME, isBuff, characterOf, skillAt, skillText, cooldownText } from '../data.js';
-  import { portrait } from '../characters.js';
+  import { costumeArt, spriteArt, enemyArt, stageScene } from '../art.js';
 
   let { ticket, onexit } = $props();
 
@@ -22,6 +22,16 @@
   let result = $state(null);
   let sel = $state({ skill: null, target: null, relay: null, relayMode: false });
   let acting = $state(null);
+  /** 單位的動作：lunge（出手衝刺，換攻擊姿勢）、hit（被打） */
+  let motion = $state({});
+  function act(side, i, kind, ms) {
+    const key = side + i;
+    motion[key] = kind;
+    setTimeout(() => {
+      if (motion[key] === kind) delete motion[key];
+    }, fast ? ms / 2 : ms);
+  }
+  const scene = stageScene(ticket.setup.stage);
   let destroyed = false;
 
   const LETTERS = ['A', 'B', 'C', 'D', 'E'];
@@ -193,10 +203,11 @@
           break;
         case 'skill': {
           const s = SKILLS.get(e.skill);
+          if (e.target_side !== e.side) act(e.side, e.unit, 'lunge', 520);
           const via = { counter: t('反擊'), link: t('連攜'), pursuit: t('追擊') }[e.via] ?? '';
           say(`${nameOf(e.side, e.unit)}：${t(s.name)}${via ? `（${via}）` : ''}`);
           if (e.slot === 2 && !e.via && e.side === 'ally') {
-            banner = { text: t(s.name), portrait: COSTUMES.get(u.id).character };
+            banner = { text: t(s.name), costume: u.id };
             await wait(650);
             banner = null;
           } else if (e.slot === 2 && !e.via) {
@@ -213,6 +224,7 @@
           await wait(180);
           break;
         case 'damage':
+          if (!e.dot) act(e.side, e.unit, 'hit', 300);
           u.hp = e.hp;
           u.shield = e.shield;
           pop(e.side, e.unit, `${e.crit ? t('暴擊 ') : ''}-${e.amount}`, e.crit ? 'crit' : e.graze ? 'graze' : 'dmg');
@@ -353,7 +365,7 @@
         {@const u = unitOf(w.side, w.unit)}
         <li class="tl tl-{w.side} el-{u.element}" class:now={k === 0}>
           {#if w.side === 'ally'}
-            <img src={portrait(COSTUMES.get(u.id).character)} alt={allyName(w.unit)} draggable="false" />
+            <img src={costumeArt(u.id)} alt={allyName(w.unit)} draggable="false" />
           {:else}
             <span class="tok">{t(ENEMIES.get(u.id).name).slice(0, 1)}</span>
             {#if u.charge}<b class="ch">⚡</b>{/if}
@@ -362,13 +374,16 @@
       {/each}
     </ol>
 
+    {#if scene}<img class="scene" src={scene} alt="" draggable="false" />{/if}
+
     <section class="field">
       <div class="allies">
         {#each view.allies as a, i (i)}
           {@const def = COSTUMES.get(a.id)}
+          {@const sp = spriteArt(a.id, motion['ally' + i] === 'lunge' ? 'attack' : 'idle')}
           <button
             type="button"
-            class="unit ally rarity-{def.rarity} el-{a.element} pos-{i}"
+            class="unit ally rarity-{def.rarity} el-{a.element} pos-{i} {motion['ally' + i] ?? ''}"
             class:down={a.hp <= 0}
             class:acting={isActing('ally', i)}
             class:target={targetSide === 'ally' && sel.target === i}
@@ -376,15 +391,16 @@
             class:pickable={canAct && ((targetSide === 'ally' && a.hp > 0) || (sel.relayMode && i !== current && a.hp > 0))}
             onclick={() => pickAlly(i)}
           >
-            <img src={portrait(def.character, a.hp <= 0 ? 'sad' : view.phase === 'won' ? 'win' : 'normal')} alt="" draggable="false" />
-            <span class="el-mark">{t(ELEMENT_NAME[a.element])}</span>
-            <span class="nm">{allyName(i)}<small>{t(def.name)}</small></span>
-            <span class="bars">
+            <span class="fig" class:bust={!sp}>
+              <img src={sp ?? costumeArt(a.id, a.hp <= 0 ? 'sad' : view.phase === 'won' ? 'win' : 'normal')} alt="" draggable="false" />
+            </span>
+            {#if isActing('ally', i)}<span class="mark" aria-hidden="true">▼</span>{/if}
+            <span class="hud">
+              <span class="nm"><span class="el-mark">{t(ELEMENT_NAME[a.element])}</span>{allyName(i)}<small>{a.hp}</small></span>
               <span class="bar hp"><i style:width={pct(a.hp, a.max_hp)}></i><s style:width={pct(a.shield, a.max_hp)}></s></span>
               <span class="bar gauge"><i style:width={pct(a.gauge, 1000)}></i></span>
+              <span class="sts">{#each a.statuses as s (s.kind)}<em class:bad={!isBuff(s.kind)}>{t(SHORT[s.kind])}{s.turns}</em>{/each}</span>
             </span>
-            <span class="hpnum">{a.hp}<small>／{a.max_hp}</small></span>
-            <span class="sts">{#each a.statuses as s (s.kind)}<em class:bad={!isBuff(s.kind)}>{t(SHORT[s.kind])}{s.turns}</em>{/each}</span>
             {#if sel.relay === i}<span class="tag">{t('接棒')}</span>{/if}
             {#each pops.filter((p) => p.side === 'ally' && p.slot === i) as p (p.key)}<b class="pop {p.kind}">{p.text}</b>{/each}
           </button>
@@ -393,9 +409,10 @@
 
       <div class="enemies">
         {#each view.enemies as e, i (i + '-' + view.wave)}
+          {@const img = enemyArt(e.id)}
           <button
             type="button"
-            class="unit enemy el-{e.element} pos-{i}"
+            class="unit enemy el-{e.element} pos-{i} {motion['enemy' + i] ?? ''}"
             class:boss={e.boss}
             class:down={e.hp <= 0}
             class:acting={isActing('enemy', i)}
@@ -404,12 +421,17 @@
             onclick={() => pickEnemy(i)}
           >
             {#if e.charge && e.hp > 0}<span class="charge">{t('蓄力 {n}', { n: e.charge.turns + 1 })}</span>{/if}
-            <span class="tok">{t(ENEMIES.get(e.id).name).slice(0, 1)}</span>
-            <span class="nm"><span class="el-mark">{t(ELEMENT_NAME[e.element])}</span>{enemyName(i)}</span>
-            {#if e.max_toughness}<span class="tough">{#each Array(e.max_toughness) as _, k (k)}<i class:on={k < e.toughness}></i>{/each}</span>{/if}
-            <span class="bar hp"><i style:width={pct(e.hp, e.max_hp)}></i><s style:width={pct(e.shield, e.max_hp)}></s></span>
-            <span class="bar gauge"><i style:width={pct(e.gauge, 1000)}></i></span>
-            <span class="sts">{#each e.statuses as s (s.kind)}<em class:bad={!isBuff(s.kind)}>{t(SHORT[s.kind])}{s.turns}</em>{/each}</span>
+            <span class="fig">
+              {#if img}<img src={img} alt="" draggable="false" />{:else}<span class="tok">{t(ENEMIES.get(e.id).name).slice(0, 1)}</span>{/if}
+            </span>
+            {#if isActing('enemy', i)}<span class="mark" aria-hidden="true">▼</span>{/if}
+            <span class="hud">
+              <span class="nm"><span class="el-mark">{t(ELEMENT_NAME[e.element])}</span>{enemyName(i)}</span>
+              {#if e.max_toughness}<span class="tough">{#each Array(e.max_toughness) as _, k (k)}<i class:on={k < e.toughness}></i>{/each}</span>{/if}
+              <span class="bar hp"><i style:width={pct(e.hp, e.max_hp)}></i><s style:width={pct(e.shield, e.max_hp)}></s></span>
+              <span class="bar gauge"><i style:width={pct(e.gauge, 1000)}></i></span>
+              <span class="sts">{#each e.statuses as s (s.kind)}<em class:bad={!isBuff(s.kind)}>{t(SHORT[s.kind])}{s.turns}</em>{/each}</span>
+            </span>
             {#each pops.filter((p) => p.side === 'enemy' && p.slot === i) as p (p.key)}<b class="pop {p.kind}">{p.text}</b>{/each}
           </button>
         {/each}
@@ -459,7 +481,7 @@
     {#if banner}
       <div class="banner" class:foe={banner.enemy}>
         <span class="band"></span>
-        {#if banner.portrait}<img src={portrait(banner.portrait, 'happy')} alt="" draggable="false" />{/if}
+        {#if banner.costume}<img src={costumeArt(banner.costume, 'happy')} alt="" draggable="false" />{/if}
         <span class="text">{banner.text}</span>
       </div>
     {/if}
@@ -618,13 +640,22 @@
     font-size: 13px;
   }
 
-  /* ---- 場地：我方在左、敵人在右 ---- */
+  /* ---- 場地：我方在左、敵人在右，站著的全身圖＋腳下的小 HUD ---- */
+  .scene {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: saturate(0.9) brightness(0.92);
+  }
+
   .field {
     position: absolute;
-    top: 136px;
+    top: 130px;
     left: 0;
     right: 0;
-    height: 380px;
+    height: 392px;
   }
 
   .allies,
@@ -632,114 +663,223 @@
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 560px;
+    width: 590px;
   }
 
   .allies {
-    left: 30px;
+    left: 10px;
   }
 
   .enemies {
-    right: 30px;
+    right: 10px;
   }
 
   .unit {
     position: absolute;
-    width: 250px;
-    height: 168px;
+    width: 200px;
+    height: 272px;
     padding: 0;
     border: 0;
-    text-align: left;
+    background: none;
     color: #fff;
-    transition: transform var(--bb-dur-2) var(--bb-ease);
-    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%);
+    text-align: left;
   }
 
-  /* 前後兩排錯開 */
-  .ally.pos-0 { left: 290px; top: 0; }
-  .ally.pos-1 { left: 290px; top: 186px; }
-  .ally.pos-2 { left: 0; top: 24px; }
-  .ally.pos-3 { left: 0; top: 210px; }
-  .enemy.pos-0 { left: 0; top: 0; }
-  .enemy.pos-1 { left: 0; top: 186px; }
-  .enemy.pos-2 { left: 290px; top: 24px; }
-  .enemy.pos-3 { left: 290px; top: 210px; }
-  .enemy.pos-4 { left: 145px; top: 105px; }
-  .enemy.boss { left: 90px; top: 6px; width: 380px; height: 366px; }
+  /* 兩欄錯開：上排在後面（圖層低）、下排在前面；HUD 統一放在最上層，不會被別人的圖蓋住 */
+  .ally.pos-0 { left: 390px; top: -24px; --z: 1; }
+  .ally.pos-1 { left: 300px; top: 110px; --z: 3; }
+  .ally.pos-2 { left: 160px; top: -24px; --z: 1; }
+  .ally.pos-3 { left: 70px; top: 110px; --z: 3; }
+  .enemy.pos-0 { left: 10px; top: -24px; --z: 1; }
+  .enemy.pos-1 { left: 100px; top: 110px; --z: 3; }
+  .enemy.pos-2 { left: 240px; top: -24px; --z: 1; }
+  .enemy.pos-3 { left: 330px; top: 110px; --z: 3; }
+  .enemy.pos-4 { left: 400px; top: 20px; --z: 2; }
+  .enemy.boss { left: 80px; top: -50px; width: 400px; height: 440px; --z: 2; }
 
-  .ally {
-    overflow: hidden;
-    background: linear-gradient(115deg, color-mix(in srgb, var(--el) 55%, #0b0f1a) 0 34%, #141a2c 34%);
-    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18), inset 0 -3px 0 var(--rarity);
-  }
-
-  .ally img {
+  .fig {
     position: absolute;
-    right: -24px;
-    top: -6px;
-    height: 220px;
-  }
-
-  .enemy {
-    background:
-      repeating-linear-gradient(135deg, rgb(255 255 255 / 0.04) 0 6px, transparent 6px 12px),
-      linear-gradient(180deg, #2a1730, #120b18);
-    box-shadow: inset 0 0 0 1px rgb(255 80 100 / 0.35);
+    z-index: var(--z, 1);
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 50px;
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-end;
-    gap: 5px;
-    padding: 10px 14px 12px;
+    align-items: flex-end;
+    justify-content: center;
+    pointer-events: none;
   }
 
-  .enemy .tok {
-    align-self: center;
-    width: 64px;
-    height: 64px;
-    margin-bottom: auto;
+  .fig::before {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 18%;
+    right: 18%;
+    height: 22px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(0 0 0 / 0.45), transparent);
+  }
+
+  .fig img {
+    position: relative;
+    max-width: 100%;
+    max-height: 100%;
+    transform-origin: 50% 100%;
+    animation: breathe 3.2s ease-in-out infinite;
+    filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.35));
+  }
+
+  /* 只有半身像時：裁成胸口以上，放在框裡 */
+  .fig.bust {
+    top: 60px;
+    overflow: hidden;
+    background: linear-gradient(160deg, color-mix(in srgb, var(--el) 55%, transparent), transparent 70%);
+  }
+
+  .fig.bust::before {
+    display: none;
+  }
+
+  .fig.bust img {
+    max-height: none;
+    height: 210px;
+    animation: none;
+  }
+
+  .enemy.boss .fig {
+    bottom: 80px;
+  }
+
+  @keyframes breathe {
+    50% {
+      transform: scaleY(calc(1 + 0.018 * var(--bb-motion)));
+    }
+  }
+
+  .tok {
+    position: relative;
+    width: 96px;
+    height: 96px;
+    margin-bottom: 20px;
     display: grid;
     place-items: center;
-    font-size: 30px;
+    font-size: 44px;
     font-weight: 900;
     background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--el) 40%, white), var(--el));
     clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
   }
 
   .enemy.boss .tok {
-    width: 170px;
-    height: 170px;
-    font-size: 80px;
+    width: 220px;
+    height: 220px;
+    font-size: 100px;
+  }
+
+  /* 出手：往對面衝；被打：抖一下、閃白 */
+  .lunge .fig {
+    animation: lunge-r 0.52s var(--bb-ease);
+  }
+
+  .enemy.lunge .fig {
+    animation-name: lunge-l;
+  }
+
+  @keyframes lunge-r {
+    35%,
+    60% {
+      transform: translateX(calc(90px * var(--bb-motion))) scale(1.06);
+    }
+  }
+
+  @keyframes lunge-l {
+    35%,
+    60% {
+      transform: translateX(calc(-90px * var(--bb-motion))) scale(1.06);
+    }
+  }
+
+  .hit .fig {
+    animation: shake 0.3s linear;
+  }
+
+  .hit .fig img {
+    filter: brightness(2.2) drop-shadow(0 0 8px #fff);
+  }
+
+  @keyframes shake {
+    25% {
+      transform: translateX(-8px);
+    }
+    50% {
+      transform: translateX(7px);
+    }
+    75% {
+      transform: translateX(-4px);
+    }
+  }
+
+  .mark {
+    position: absolute;
+    z-index: 12;
+    left: 50%;
+    top: -18px;
+    transform: translateX(-50%);
+    color: var(--bb-yellow);
+    font-size: 22px;
+    text-shadow: 0 2px 0 var(--bb-ink);
+    animation: bob 0.8s ease-in-out infinite;
+  }
+
+  @keyframes bob {
+    50% {
+      margin-top: -6px;
+    }
+  }
+
+  .hud {
+    position: absolute;
+    z-index: 10;
+    left: 18px;
+    right: 18px;
+    bottom: 0;
+    padding: 4px 8px 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: rgb(11 15 26 / 0.82);
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    box-shadow: inset 0 2px 0 var(--el);
+  }
+
+  .enemy.boss .hud {
+    left: 40px;
+    right: 40px;
   }
 
   .pickable {
     cursor: pointer;
   }
 
-  .unit.pickable:hover {
+  .unit.pickable:hover .fig {
     transform: translateY(-4px);
   }
 
-  .acting {
-    box-shadow: inset 0 0 0 3px var(--bb-yellow), 0 0 0 0 transparent;
+  .acting .hud {
+    box-shadow: inset 0 0 0 2px var(--bb-yellow);
   }
 
-  .acting::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 60px;
-    height: 6px;
-    background: var(--bb-yellow);
+  .target .fig img,
+  .target .tok {
+    filter: drop-shadow(0 0 10px #7fb6ff) drop-shadow(0 0 4px #7fb6ff);
   }
 
-  .target {
-    box-shadow: inset 0 0 0 3px #7fb6ff, inset 0 0 24px rgb(61 155 255 / 0.55);
+  .target .hud {
+    box-shadow: inset 0 0 0 2px #7fb6ff;
   }
 
-  .relay {
-    box-shadow: inset 0 0 0 3px var(--bb-yellow), inset 0 0 24px rgb(255 210 31 / 0.4);
+  .relay .hud {
+    box-shadow: inset 0 0 0 2px var(--bb-yellow);
   }
 
   .down {
@@ -747,68 +887,38 @@
     filter: grayscale(1);
   }
 
-  .ally > .el-mark {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-  }
-
   .nm {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 6px;
     font-weight: 900;
-    font-size: 16px;
-    text-shadow: 0 2px 4px #000;
-    z-index: 1;
+    font-size: 13px;
   }
 
-  .ally .nm {
-    position: absolute;
-    left: 12px;
-    bottom: 56px;
+  .nm .el-mark {
+    width: 18px;
+    height: 18px;
+    font-size: 9px;
   }
 
   .nm small {
-    font-size: 11px;
-    color: var(--bb-yellow);
-  }
-
-  .enemy .nm {
-    flex-direction: row;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-  }
-
-  .enemy .nm .el-mark {
-    width: 20px;
-    height: 20px;
-    font-size: 10px;
-  }
-
-  .bars {
-    position: absolute;
-    left: 12px;
-    right: 12px;
-    bottom: 26px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    z-index: 1;
+    margin-left: auto;
+    font: italic 400 14px var(--bb-font-display);
+    color: var(--bb-on-ink-2);
   }
 
   .bar {
     position: relative;
     display: block;
     width: 100%;
-    height: 10px;
+    height: 8px;
     background: rgb(0 0 0 / 0.65);
     transform: skewX(var(--bb-skew));
     overflow: hidden;
   }
 
   .bar.gauge {
-    height: 5px;
+    height: 4px;
   }
 
   .bar i,
@@ -837,33 +947,11 @@
     opacity: 0.8;
   }
 
-  .hpnum {
-    position: absolute;
-    left: 12px;
-    bottom: 6px;
-    font: italic 400 16px var(--bb-font-display);
-    z-index: 1;
-  }
-
-  .hpnum small {
-    font-size: 11px;
-    opacity: 0.7;
-  }
-
   .sts {
     display: flex;
     flex-wrap: wrap;
     gap: 3px;
-    min-height: 16px;
-    z-index: 1;
-  }
-
-  .ally .sts {
-    position: absolute;
-    right: 8px;
-    bottom: 6px;
-    justify-content: flex-end;
-    max-width: 150px;
+    min-height: 14px;
   }
 
   .sts em {
@@ -881,8 +969,8 @@
   .tag,
   .charge {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 6px;
+    right: 6px;
     background: var(--bb-yellow);
     color: var(--bb-on-yellow);
     padding: 2px 10px;
@@ -920,6 +1008,7 @@
 
   .pop {
     position: absolute;
+    z-index: 12;
     left: 50%;
     top: 34%;
     transform: translateX(-50%);
@@ -1081,8 +1170,8 @@
     margin: 0;
     padding: 10px 14px;
     list-style: none;
-    background: var(--bb-glass-strong);
-    box-shadow: inset 0 0 0 1px var(--bb-line);
+    background: rgb(11 15 26 / 0.62);
+    color: var(--bb-on-ink);
     font-size: 12px;
     display: flex;
     flex-direction: column;
@@ -1092,7 +1181,7 @@
   }
 
   .log li {
-    border-left: 2px solid var(--bb-blue);
+    border-left: 2px solid var(--bb-yellow);
     padding-left: 6px;
   }
 
